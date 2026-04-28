@@ -1,0 +1,30 @@
+@startuml
+skinparam componentStyle uml2
+
+node "Frontend (SPA React + Vite)" {
+    component "UI Components" as UI
+    component "React Router" as Router
+    component "Views: Login, Dashboard, Public" as Pages
+    
+    Router --> Pages
+    Pages --> UI
+}
+
+node "Backend REST API (FastAPI)" {
+    component "API Routers / Endpoints" as Controllers
+    component "Pydantic Schemas" as Schemas
+    component "Services (Business Logic)" as Services
+    component "Repositories Pattern" as Repos
+    
+    Controllers --> Schemas : Valida Requests
+    Controllers --> Services : Delega
+    Services --> Repos : Acceso a Datos
+}
+
+database "SQLite Database" {
+    component "ticket_turno.db" as DB
+}
+
+Pages --> Controllers : HTTP / JSON
+Repos --> DB : SQL Queries
+@enduml

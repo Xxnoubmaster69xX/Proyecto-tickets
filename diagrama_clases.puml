@@ -1,0 +1,82 @@
+@startuml
+skinparam handwritten false
+skinparam monochrome false
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+
+' Entidades
+abstract class BaseModel {
+    +int id
+}
+
+class Alumno {
+    +String curp
+    +String nombre
+    +String paterno
+    +String materno
+    +int nivel_id
+    +int municipio_id
+}
+
+class Solicitud {
+    +String curp_alumno
+    +int numero_turno
+    +int asunto_id
+    +String quien_tramita
+    +String telefono_principal
+    +String correo
+    +String estatus
+    +DateTime fecha_registro
+}
+
+class Municipio {
+    +String nombre
+}
+
+class NivelEducativo {
+    +String nombre
+}
+
+class Asunto {
+    +String descripcion
+}
+
+' Relaciones de Modelos
+BaseModel <|-- Alumno
+BaseModel <|-- Municipio
+BaseModel <|-- NivelEducativo
+BaseModel <|-- Asunto
+
+Alumno "1" --> "1" Municipio : Pertenece
+Alumno "1" --> "1" NivelEducativo : Cursa
+Solicitud "*" --> "1" Alumno : Registra
+Solicitud "*" --> "1" Asunto : Trata sobre
+
+' Repositorios (Patrón Repository)
+interface BaseRepository {
+    +get_all()
+    +get_by_id(id)
+    +insert(model)
+    +update(model)
+    +delete(id)
+}
+
+class SolicitudRepository {
+    +get_pendientes()
+    +get_stats_dashboard()
+    +generate_ticket_number(municipio_id)
+    +buscar_por_curp(curp)
+}
+
+class CatalogoRepository {
+    +get_municipios()
+    +get_niveles()
+    +get_asuntos()
+}
+
+BaseRepository <|-- SolicitudRepository
+BaseRepository <|-- CatalogoRepository
+
+SolicitudRepository ..> Solicitud : Manipula
+CatalogoRepository ..> Municipio : Manipula
+@enduml
