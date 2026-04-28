@@ -33,9 +33,9 @@ export default function Dashboard() {
     { name: 'Resueltos', value: stats.resueltos }
   ];
 
-  // Map array of tuples to object arrays for UI
-  const barData = stats.por_municipio?.slice(0, 10).map((i:any) => ({ name: i[0], value: i[1] })) || [];
-  const asuntoData = stats.por_asunto?.map((i:any) => ({ name: i[0], value: i[1] })) || [];
+  // Map array of dicts to object arrays for UI
+  const barData = stats.por_municipio?.slice(0, 10).map((i:any) => ({ name: i.nombre, value: i['COUNT(*)'] })) || [];
+  const asuntoData = stats.por_asunto?.map((i:any) => ({ name: i.descripcion, value: i['COUNT(*)'] })) || [];
 
   return (
     <div className="space-y-6">
