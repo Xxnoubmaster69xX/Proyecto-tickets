@@ -27,6 +27,18 @@ export default function Catalogos() {
     fetchData();
   };
 
+  const handleEdit = async (id: number, currentVal: string) => {
+    const newVal = window.prompt(`Editar ${activeTab}:`, currentVal);
+    if (!newVal || !newVal.trim() || newVal === currentVal) return;
+    
+    await fetch(`http://localhost:8000/api/catalogos/${activeTab}/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre: newVal.trim(), descripcion: newVal.trim() })
+    });
+    fetchData();
+  };
+
   const handleDelete = async (id: number) => {
     if (!confirm('¿Seguro?')) return;
     const res = await fetch(`http://localhost:8000/api/catalogos/${activeTab}/${id}`, { method: 'DELETE' });
@@ -86,7 +98,7 @@ export default function Catalogos() {
                 <tr>
                   <th className="px-6 py-3 w-16">ID</th>
                   <th className="px-6 py-3">Nombre / Descripción</th>
-                  <th className="px-6 py-3 w-24 text-right">Acción</th>
+                  <th className="px-6 py-3 w-32 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
@@ -94,7 +106,10 @@ export default function Catalogos() {
                   <tr key={item.id} className="hover:bg-white/5 transition-colors">
                     <td className="px-6 py-3 font-mono text-gray-500">{item.id}</td>
                     <td className="px-6 py-3 font-medium text-white">{item.nombre || item.descripcion}</td>
-                    <td className="px-6 py-3 text-right">
+                    <td className="px-6 py-3 text-right flex gap-2 justify-end">
+                      <button onClick={() => handleEdit(item.id, item.nombre || item.descripcion)} className="p-1.5 bg-gray-600/30 text-gray-300 hover:bg-gray-600/50 rounded-md transition-all">
+                        <Edit3 className="w-4 h-4" />
+                      </button>
                       <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-md transition-all">
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -109,3 +124,5 @@ export default function Catalogos() {
     </div>
   );
 }
+// Local import fixing
+import { Edit3 } from 'lucide-react';

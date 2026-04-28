@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Send, Download, CheckCircle, Ticket } from 'lucide-react';
+import { Send, Download, CheckCircle, Ticket, User, Search, Edit3 } from 'lucide-react';
+import clsx from 'clsx';
+
+const CURP_REGEX = /^[A-Z]{1}[AEIOU]{1}[A-Z]{2}[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|1[0-9]|2[0-9]|3[0-1])[HM]{1}(AS|BC|BS|CC|CS|CH|CL|CM|DF|DG|GT|GR|HG|JC|MC|MN|MS|NT|NL|OC|PL|QT|QR|SP|SL|SR|TC|TS|TL|VZ|YN|ZS|NE)[B-DF-HJ-NP-TV-Z]{3}[0-9A-Z]{1}[0-9]{1}$/;
 
 export default function PublicRegistration() {
   const [catalogs, setCatalogs] = useState({ municipios: [], niveles: [], asuntos: [] });
+  const [mode, setMode] = useState<'nuevo' | 'modificar'>('nuevo');
+  const [turnoMod, setTurnoMod] = useState('');
+  
   const [form, setForm] = useState({
     curp_alumno: '',
     nombre: '',
@@ -17,8 +23,12 @@ export default function PublicRegistration() {
     correo: '',
     observaciones: ''
   });
+  
   const [status, setStatus] = useState({ loading: false, msg: '', type: '' });
   const [successData, setSuccessData] = useState<any>(null);
+
+  const curpValid = form.curp_alumno.length === 18 && CURP_REGEX.test(form.curp_alumno);
+  const isFormValid = curpValid && form.nombre && form.paterno && form.materno && form.nivel_id && form.municipio_id && form.asunto_id && form.quien_tramita && form.telefono_principal && form.correo;
 
   useEffect(() => {
     const fetchCatalogs = async () => {
@@ -40,22 +50,82 @@ export default function PublicRegistration() {
     fetchCatalogs();
   }, []);
 
+  const handleSearchToModify = async () => {
+    if (!curpValid || !turnoMod) {
+      setStatus({ loading: false, msg: 'Ingrese CURP válida y Número de Turno', type: 'error' });
+      return;
+    }
+    
+    setStatus({ loading: true, msg: 'Buscando...', type: 'info' });
+    try {
+      const res = await fetch(`http://localhost:8000/api/solicitudes/buscar?curp=${form.curp_alumno}`);
+      const data = await res.json();
+      
+      const found = data.find((d:any) => d.numero_turno.toString() === turnoMod);
+      
+      if (found) {
+        setForm({
+          curp_alumno: found.curp_alumno,
+          nombre: found.nombre_alumno.split(' ')[0] || '', // Aproximación
+          paterno: found.nombre_alumno.split(' ')[1] || '',
+          materno: found.nombre_alumno.split(' ')[2] || '',
+          nivel_id: found.nivel_id || '',
+          municipio_id: found.municipio_id || '',
+          asunto_id: found.asunto_id || '',
+          quien_tramita: found.quien_tramita || '',
+          telefono_principal: found.telefono_principal || '',
+          telefono_secundario: found.telefono_secundario || '',
+          correo: found.correo || '',
+          observaciones: found.observaciones || ''
+        });
+        setStatus({ loading: false, msg: 'Solicitud encontrada. Puede modificar datos de contacto y asunto.', type: 'success' });
+      } else {
+        setStatus({ loading: false, msg: 'No se encontró una solicitud con esos datos', type: 'error' });
+      }
+    } catch (err) {
+      setStatus({ loading: false, msg: 'Error de conexión', type: 'error' });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isFormValid) return;
+    
     setStatus({ loading: true, msg: 'Procesando...', type: 'info' });
     
     try {
-      const res = await fetch('http://localhost:8000/api/solicitudes', {
-        method: 'POST',
+      const payload = {
+        ...form, 
+        nivel_id: parseInt(form.nivel_id), 
+        municipio_id: parseInt(form.municipio_id), 
+        asunto_id: parseInt(form.asunto_id)
+      };
+
+      let url = 'http://localhost:8000/api/solicitudes';
+      let method = 'POST';
+
+      if (mode === 'modificar') {
+        url = `http://localhost:8000/api/solicitudes/${form.curp_alumno}/${turnoMod}`;
+        method = 'PUT';
+      }
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({...form, nivel_id: parseInt(form.nivel_id), municipio_id: parseInt(form.municipio_id), asunto_id: parseInt(form.asunto_id)})
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       
       if (data.success) {
-        setStatus({ loading: false, msg: '¡Trámite registrado con éxito!', type: 'success' });
-        setSuccessData(data.solicitud);
-        setForm({ curp_alumno: '', nombre: '', paterno: '', materno: '', nivel_id: '', municipio_id: '', asunto_id: '', quien_tramita: '', telefono_principal: '', telefono_secundario: '', correo: '', observaciones: '' });
+        if (mode === 'nuevo') {
+          setStatus({ loading: false, msg: '¡Trámite registrado con éxito!', type: 'success' });
+          setSuccessData(data.solicitud);
+        } else {
+          setStatus({ loading: false, msg: '¡Trámite actualizado con éxito!', type: 'success' });
+        }
+        if (mode === 'nuevo') {
+          setForm({ curp_alumno: '', nombre: '', paterno: '', materno: '', nivel_id: '', municipio_id: '', asunto_id: '', quien_tramita: '', telefono_principal: '', telefono_secundario: '', correo: '', observaciones: '' });
+        }
       } else {
         setStatus({ loading: false, msg: data.detail || 'Error al procesar', type: 'error' });
       }
@@ -109,26 +179,56 @@ export default function PublicRegistration() {
       <div className="mb-8 flex items-center gap-6">
         <img src="/logo.webp" alt="Logo UAdeC" className="w-24 h-auto object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]" />
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Registro de Trámite Nuevo</h1>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Ventanilla de Trámites</h1>
           <p className="text-gray-400 mt-2">Complete el formulario para obtener su número de turno en la UAdeC.</p>
         </div>
       </div>
 
+      <div className="flex space-x-1 bg-surfaceLight p-1 rounded-xl mb-6 max-w-sm">
+        <button
+          onClick={() => { setMode('nuevo'); setStatus({ loading: false, msg: '', type: ''}); }}
+          className={clsx("w-full py-2.5 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2", mode === 'nuevo' ? 'bg-primary text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5')}
+        >
+          <Ticket className="w-4 h-4" /> Nuevo Registro
+        </button>
+        <button
+          onClick={() => { setMode('modificar'); setStatus({ loading: false, msg: '', type: ''}); }}
+          className={clsx("w-full py-2.5 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2", mode === 'modificar' ? 'bg-primary text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5')}
+        >
+          <Edit3 className="w-4 h-4" /> Modificar Turno
+        </button>
+      </div>
+
       <div className="glass-panel p-1 sm:p-8 relative">
-        {/* Glow corner */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
         
         {status.msg && (
-          <div className={`p-4 mb-6 rounded-lg text-sm font-medium ${
-            status.type === 'error' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 
-            status.type === 'info' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 
-            'bg-green-500/10 text-green-400 border border-green-500/20'
-          }`}>
+          <div className={clsx("p-4 mb-6 rounded-lg text-sm font-medium border", 
+            status.type === 'error' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
+            status.type === 'info' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 
+            'bg-green-500/10 text-green-400 border-green-500/20'
+          )}>
             {status.msg}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
+        {mode === 'modificar' && (
+          <div className="mb-6 p-4 bg-surfaceLight rounded-xl border border-gray-700 flex gap-4 items-end">
+             <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">CURP Registrada</label>
+              <input value={form.curp_alumno} onChange={e => setForm({...form, curp_alumno: e.target.value.toUpperCase()})} className={clsx("input-field font-mono", form.curp_alumno && (curpValid ? 'border-green-500 focus:ring-green-500' : 'border-red-500 focus:ring-red-500'))} placeholder="18 caracteres" maxLength={18} />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">Número de Turno</label>
+              <input value={turnoMod} onChange={e => setTurnoMod(e.target.value)} type="number" className="input-field" placeholder="Ej. 1" />
+            </div>
+            <button onClick={handleSearchToModify} disabled={!curpValid || !turnoMod || status.loading} className="btn-secondary h-[42px] flex items-center justify-center gap-2 px-6">
+              <Search className="w-4 h-4" /> Buscar
+            </button>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className={clsx("relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6 p-4", mode === 'modificar' && !form.quien_tramita && 'opacity-50 pointer-events-none')}>
           
           <div className="space-y-4 md:col-span-2">
             <h3 className="text-lg font-semibold text-white flex items-center gap-2 border-b border-gray-800 pb-2">
@@ -136,32 +236,37 @@ export default function PublicRegistration() {
             </h3>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">CURP *</label>
-            <input required value={form.curp_alumno} onChange={e => setForm({...form, curp_alumno: e.target.value.toUpperCase()})} className="input-field" placeholder="18 caracteres" maxLength={18} />
-          </div>
+          {mode === 'nuevo' && (
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-300 mb-1">CURP *</label>
+              <input required value={form.curp_alumno} onChange={e => setForm({...form, curp_alumno: e.target.value.toUpperCase()})} className={clsx("input-field font-mono uppercase", form.curp_alumno && (curpValid ? 'border-green-500 focus:ring-green-500 shadow-[0_0_10px_rgba(34,197,94,0.2)]' : 'border-red-500 focus:ring-red-500'))} placeholder="Ingrese los 18 caracteres de la CURP" maxLength={18} />
+              {form.curp_alumno && !curpValid && <p className="text-red-400 text-xs mt-1">Formato de CURP inválido o incompleto</p>}
+              {curpValid && <p className="text-green-400 text-xs mt-1">CURP Válida ✓</p>}
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Nombre(s) *</label>
-            <input required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className="input-field" />
+            <input required disabled={mode==='modificar'} value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className="input-field disabled:opacity-50" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Apellido Paterno *</label>
-            <input required value={form.paterno} onChange={e => setForm({...form, paterno: e.target.value})} className="input-field" />
+            <input required disabled={mode==='modificar'} value={form.paterno} onChange={e => setForm({...form, paterno: e.target.value})} className="input-field disabled:opacity-50" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Apellido Materno *</label>
-            <input required value={form.materno} onChange={e => setForm({...form, materno: e.target.value})} className="input-field" />
+            <input required disabled={mode==='modificar'} value={form.materno} onChange={e => setForm({...form, materno: e.target.value})} className="input-field disabled:opacity-50" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Nivel Educativo *</label>
-            <select required value={form.nivel_id} onChange={e => setForm({...form, nivel_id: e.target.value})} className="input-field">
+            <select required disabled={mode==='modificar'} value={form.nivel_id} onChange={e => setForm({...form, nivel_id: e.target.value})} className="input-field disabled:opacity-50">
               <option value="">Seleccione...</option>
               {catalogs.niveles.map((n:any) => <option key={n.id} value={n.id}>{n.nombre}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Municipio de Estudio *</label>
-            <select required value={form.municipio_id} onChange={e => setForm({...form, municipio_id: e.target.value})} className="input-field">
+            <select required disabled={mode==='modificar'} value={form.municipio_id} onChange={e => setForm({...form, municipio_id: e.target.value})} className="input-field disabled:opacity-50">
               <option value="">Seleccione un municipio</option>
               {catalogs.municipios.map((m:any) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
             </select>
@@ -169,7 +274,7 @@ export default function PublicRegistration() {
 
           <div className="space-y-4 md:col-span-2 mt-4">
             <h3 className="text-lg font-semibold text-white flex items-center gap-2 border-b border-gray-800 pb-2">
-              <Ticket className="w-5 h-5 text-primary" /> Datos del Trámite
+              <Ticket className="w-5 h-5 text-primary" /> Datos del Trámite y Contacto
             </h3>
           </div>
 
@@ -202,9 +307,9 @@ export default function PublicRegistration() {
           </div>
 
           <div className="md:col-span-2 pt-6">
-            <button type="submit" disabled={status.loading} className="w-full md:w-auto px-8 btn-primary float-right flex items-center justify-center gap-2">
-              <Send className="w-4 h-4" />
-              {status.loading ? 'Procesando...' : 'Generar Ticket de Turno'}
+            <button type="submit" disabled={status.loading || !isFormValid} className={clsx("w-full md:w-auto px-8 py-3 float-right flex items-center justify-center gap-2 font-bold rounded-lg shadow-lg transition-all", isFormValid ? 'bg-primary hover:bg-primaryHover text-white shadow-primary/20' : 'bg-gray-700 text-gray-400 cursor-not-allowed')}>
+              {mode === 'nuevo' ? <Send className="w-5 h-5" /> : <Save className="w-5 h-5" />}
+              {status.loading ? 'Procesando...' : (mode === 'nuevo' ? 'Generar Ticket de Turno' : 'Guardar Cambios')}
             </button>
           </div>
         </form>
@@ -212,5 +317,5 @@ export default function PublicRegistration() {
     </div>
   );
 }
-// Temporary import resolution for lucide missing User since we didn't import it at the top
-import { User } from 'lucide-react';
+// Import Save locally to fix missing dependency
+import { Save } from 'lucide-react';
