@@ -63,4 +63,5 @@ EventBus().publish(AppEvent.ESTATUS_CAMBIADO, ...)
 - **Clave:** Admin123!
 
 ## 10. Autores
-- [Tu Nombre/Equipo]
+- David Eduardo Lara Flores
+- Miguel Arrollo Lopez
