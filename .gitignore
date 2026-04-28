@@ -1,0 +1,27 @@
+# Entornos Virtuales
+venv/
+env/
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Node.js
+node_modules/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Base de datos local (Opcional, pero recomendado ignorar db temporales si hay datos reales)
+# ticket_turno.db
+
+# IDEs y SO
+.vscode/
+.idea/
+.DS_Store
+*.swp
