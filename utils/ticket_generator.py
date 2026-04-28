@@ -1,8 +1,9 @@
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.colors import HexColor
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 import io
+import os
 from models.solicitud import Solicitud
 from datetime import datetime
 
@@ -21,6 +22,14 @@ def generate_ticket_pdf(solicitud: Solicitud) -> bytes:
     normal_style = styles['Normal']
     normal_style.fontSize = 12
     normal_style.spaceAfter = 8
+
+    # Logo
+    logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'assets', 'images', 'universidad-autonoma-de-coahuila.webp'))
+    if os.path.exists(logo_path):
+        img = Image(logo_path, width=120, height=120)
+        img.hAlign = 'CENTER'
+        elements.append(img)
+        elements.append(Spacer(1, 10))
 
     elements.append(Paragraph("Comprobante de Turno — Ticket de Turno Escolar", title_style))
     elements.append(Paragraph(f"TURNO #{solicitud.numero_turno:04d}", turno_style))

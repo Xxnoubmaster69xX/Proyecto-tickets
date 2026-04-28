@@ -86,7 +86,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="glass-panel p-6 h-96 flex flex-col">
+        <div className="glass-panel p-6 h-[500px] flex flex-col">
           <h3 className="text-lg font-semibold text-white mb-6">Estado Legal de Tramites</h3>
           <div className="flex-1">
             <ResponsiveContainer width="100%" height="100%">
@@ -100,7 +100,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="glass-panel p-6 h-96 flex flex-col">
+        <div className="glass-panel p-6 h-[500px] flex flex-col">
           <h3 className="text-lg font-semibold text-white mb-6">{mId ? 'Distribución por Asunto' : 'Top Municipios (Actividad)'}</h3>
           <div className="flex-1">
             <ResponsiveContainer width="100%" height="100%">

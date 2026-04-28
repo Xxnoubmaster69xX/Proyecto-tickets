@@ -52,6 +52,14 @@ def crear_solicitud(req: SolicitudCreate):
         raise HTTPException(status_code=400, detail=msg)
     return {"success": True, "solicitud": solicitud.to_dict()}
 
+@app.put("/api/solicitudes/{id}/estatus")
+def cambiar_estatus(id: int, estatus: str):
+    controller = SolicitudController()
+    success, msg = controller.cambiar_estatus(id, estatus)
+    if not success:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"success": True}
+
 @app.put("/api/solicitudes/{curp}/{turno}")
 def modificar_solicitud(curp: str, turno: int, req: SolicitudUpdate):
     controller = SolicitudController()
@@ -70,14 +78,6 @@ def buscar_solicitudes(curp: str = None, nombre: str = None):
     else:
         res = controller.repo.get_all()
     return [s.to_dict() for s in res]
-
-@app.put("/api/solicitudes/{id}/estatus")
-def cambiar_estatus(id: int, estatus: str):
-    controller = SolicitudController()
-    success, msg = controller.cambiar_estatus(id, estatus)
-    if not success:
-        raise HTTPException(status_code=400, detail=msg)
-    return {"success": True}
 
 @app.delete("/api/solicitudes/{id}")
 def eliminar_solicitud(id: int):
