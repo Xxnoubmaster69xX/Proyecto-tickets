@@ -1,0 +1,78 @@
+@startuml "Ticket de Turno ER Diagram"
+
+' Configuración visual para un estilo limpio
+!define ENTITY(name) class name << (E,#FFAAAA) >>
+skinparam class {
+    BackgroundColor White
+    ArrowColor #2C3E50
+    BorderColor #2C3E50
+}
+hide methods
+hide circles
+
+ENTITY(municipios) {
+    + id : INTEGER [PK]
+    --
+    nombre : TEXT
+    activo : INTEGER
+}
+
+ENTITY(niveles_educativos) {
+    + id : INTEGER [PK]
+    --
+    nombre : TEXT
+    activo : INTEGER
+}
+
+ENTITY(asuntos) {
+    + id : INTEGER [PK]
+    --
+    descripcion : TEXT
+    activo : INTEGER
+}
+
+ENTITY(usuarios) {
+    + id : INTEGER [PK]
+    --
+    username : TEXT
+    password_hash : TEXT
+    nombre_completo : TEXT
+    activo : INTEGER
+    creado_en : DATETIME
+}
+
+ENTITY(alumnos) {
+    + curp : TEXT [PK]
+    --
+    nombre : TEXT
+    paterno : TEXT
+    materno : TEXT
+    # nivel_id : INTEGER [FK]
+    # municipio_id : INTEGER [FK]
+}
+
+ENTITY(solicitudes) {
+    + id : INTEGER [PK]
+    --
+    numero_turno : INTEGER
+    # curp_alumno : TEXT [FK]
+    quien_tramita : TEXT
+    telefono_principal : TEXT
+    telefono_secundario : TEXT
+    correo : TEXT
+    # asunto_id : INTEGER [FK]
+    # municipio_id : INTEGER [FK]
+    estatus : TEXT
+    observaciones : TEXT
+    creado_en : DATETIME
+    actualizado_en : DATETIME
+}
+
+' Relaciones con etiquetas descriptivas
+alumnos }|--|| niveles_educativos : "pertenece a"
+alumnos }|--|| municipios : "reside en"
+solicitudes }|--|| alumnos : "asociada a"
+solicitudes }|--|| asuntos : "motivo"
+solicitudes }|--|| municipios : "lugar de trámite"
+
+@enduml
