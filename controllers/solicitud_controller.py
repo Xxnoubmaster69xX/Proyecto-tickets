@@ -91,6 +91,9 @@ class SolicitudController:
             return []
         return self.repo.get_by_nombre_alumno(nombre)
 
+    def buscar_por_turno_y_curp(self, turno: int, curp: str) -> Optional[Solicitud]:
+        return self.repo.get_by_turno_and_curp(turno, curp.upper())
+
     def cambiar_estatus(self, id: int, estatus: str) -> Tuple[bool, str]:
         if estatus not in ('Pendiente', 'Resuelto'):
             return False, "Estatus inválido."

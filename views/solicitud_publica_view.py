@@ -105,7 +105,7 @@ class SolicitudPublicaView(BaseView):
             self.show_error("Debe ingresar la CURP y el Número de Turno para modificar.")
             return
 
-        sol = self.controller.repo.get_by_turno_and_curp(int(turno), curp)
+        sol = self.controller.buscar_por_turno_y_curp(int(turno), curp)
         if sol:
             self.txt_quien.setText(sol.quien_tramita)
             self.txt_tel1.setText(sol.telefono_principal)

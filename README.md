@@ -48,10 +48,13 @@ EventBus().publish(AppEvent.ESTATUS_CAMBIADO, ...)
 *(Incluir imágenes del registro, panel admin y dashboard aquí)*
 
 ## 6. Modelo de Datos
-*(Incluir er_diagram.png aquí)*
+![Diagrama Entidad-Relación](database_er_diagram.png)
 
 ## 7. Diagrama de Clases
-*(Incluir classes_TicketDeTurno.png aquí)*
+![Diagrama de Clases](diagrama_clases.png)
+
+## 8. Arquitectura
+![Diagrama de Arquitectura](diagrama_arquitectura.png)
 
 ## 8. Decisiones Técnicas
 - **SQLite**: No requiere instalación de servidor, ideal para una aplicación de escritorio distribuible.

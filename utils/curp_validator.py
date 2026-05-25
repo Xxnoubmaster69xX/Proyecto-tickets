@@ -9,7 +9,7 @@ CURP_REGEX = re.compile(
     r'[HM]{1}'                          # sexo
     r'(AS|BC|BS|CC|CL|CM|CS|CH|DF|DG|GT|GR|HG|JC|MC|MN|MS|NT|NL|OC|PL|QT|QR|SP|SL|SR|TC|TS|TL|VZ|YN|ZS|NE)'  # estados
     r'[B-DF-HJ-NP-TV-Z]{3}'            # consonantes
-    r'[A-Z0-9]{1}\d{1}$',              # dígito(s) verificador
+    r'[A-Z0-9]{2}$',                   # dígito(s) verificador
     re.IGNORECASE
 )
 

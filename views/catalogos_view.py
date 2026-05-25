@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (QVBoxLayout, QHBoxLayout, QTabWidget, QWidget, 
-                             QPushButton, QTableWidget, QTableWidgetItem, QHeaderView, QInputDialog, QMessageBox)
+                             QPushButton, QTableWidget, QTableWidgetItem, QHeaderView, QInputDialog, QMessageBox, QLineEdit)
 from .base_view import BaseView
 from controllers.admin_controller import AdminController
 

@@ -18,7 +18,5 @@ class AuthController:
 
     def logout(self) -> None:
         SessionManager().logout()
-        EventBus().clear_all()
-        # Nota: aquí no cerramos la BD directamente para evitar crashear la UI,
-        # la BD se cerrará en app.aboutToQuit
         EventBus().publish(AppEvent.LOGOUT)
+        EventBus().clear_all()

@@ -30,16 +30,51 @@ class UsuarioRepository(BaseRepository[Usuario]):
             return None
 
     def get_all(self) -> List[Usuario]:
-        pass
+        try:
+            cursor = self.db.cursor()
+            cursor.execute("SELECT * FROM usuarios")
+            rows = cursor.fetchall()
+            return [self._map_row_to_entity(row) for row in rows]
+        except Exception as e:
+            print(f"[{datetime.now()}] Error get_all usuario: {e}")
+            return []
 
     def create(self, entity: Usuario) -> Usuario:
-        pass
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''
+                INSERT INTO usuarios (username, password_hash, nombre_completo, activo, creado_en)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (entity.username, entity.password_hash, entity.nombre_completo, entity.activo, entity.creado_en))
+            self.db.commit()
+            entity.id = cursor.lastrowid
+            return entity
+        except Exception as e:
+            print(f"[{datetime.now()}] Error create usuario: {e}")
+            raise
 
     def update(self, entity: Usuario) -> bool:
-        pass
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''
+                UPDATE usuarios SET username=?, password_hash=?, nombre_completo=?, activo=?
+                WHERE id=?
+            ''', (entity.username, entity.password_hash, entity.nombre_completo, entity.activo, entity.id))
+            self.db.commit()
+            return cursor.rowcount > 0
+        except Exception as e:
+            print(f"[{datetime.now()}] Error update usuario: {e}")
+            return False
 
     def delete(self, id: int) -> bool:
-        pass
+        try:
+            cursor = self.db.cursor()
+            cursor.execute("DELETE FROM usuarios WHERE id = ?", (id,))
+            self.db.commit()
+            return cursor.rowcount > 0
+        except Exception as e:
+            print(f"[{datetime.now()}] Error delete usuario: {e}")
+            return False
 
     def get_by_username(self, username: str) -> Optional[Usuario]:
         try:

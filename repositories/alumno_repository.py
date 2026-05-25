@@ -19,7 +19,14 @@ class AlumnoRepository(BaseRepository[Alumno]):
             return None
 
     def get_all(self) -> List[Alumno]:
-        pass
+        try:
+            cursor = self.db.cursor()
+            cursor.execute("SELECT * FROM alumnos")
+            rows = cursor.fetchall()
+            return [Alumno(**row) for row in rows]
+        except Exception as e:
+            print(f"[{datetime.now()}] Error get_all alumno: {e}")
+            return []
 
     def create(self, a: Alumno) -> Alumno:
         try:
@@ -48,7 +55,14 @@ class AlumnoRepository(BaseRepository[Alumno]):
             return False
 
     def delete(self, id: str) -> bool:
-        pass
+        try:
+            cursor = self.db.cursor()
+            cursor.execute("DELETE FROM alumnos WHERE curp = ?", (id,))
+            self.db.commit()
+            return cursor.rowcount > 0
+        except Exception as e:
+            print(f"[{datetime.now()}] Error delete alumno: {e}")
+            return False
 
     def create_or_update(self, a: Alumno) -> Alumno:
         existing = self.get_by_id(a.curp)
