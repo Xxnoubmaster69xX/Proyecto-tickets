@@ -9,7 +9,8 @@ from utils.ticket_generator import generate_ticket_pdf
 from patterns.event_bus import EventBus, AppEvent
 
 class SolicitudPublicaView(BaseView):
-    def __init__(self):
+    def __init__(self, registro_only=False):
+        self.registro_only = registro_only
         super().__init__()
         self.controller = SolicitudController()
         self.admin_controller = AdminController()
@@ -49,11 +50,12 @@ class SolicitudPublicaView(BaseView):
         self.btn_buscar_mod = QPushButton("Buscar por CURP + Turno")
         self.btn_buscar_mod.clicked.connect(self.buscar_para_modificar)
 
-        mod_layout = QHBoxLayout()
-        mod_layout.addWidget(self.txt_turno_mod)
-        mod_layout.addWidget(self.btn_buscar_mod)
+        if not self.registro_only:
+            mod_layout = QHBoxLayout()
+            mod_layout.addWidget(self.txt_turno_mod)
+            mod_layout.addWidget(self.btn_buscar_mod)
+            form_layout.addRow("Modificar Trámite:", mod_layout)
 
-        form_layout.addRow("Modificar Trámite:", mod_layout)
         form_layout.addRow("CURP Alumno *", self.txt_curp)
         form_layout.addRow("Nombre *", self.txt_nombre)
         form_layout.addRow("Apellido Paterno *", self.txt_paterno)

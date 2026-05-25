@@ -1,9 +1,10 @@
 from PyQt6.QtWidgets import (QVBoxLayout, QHBoxLayout, QTabWidget, QWidget, 
                              QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, 
-                             QHeaderView, QMessageBox)
+                             QHeaderView, QMessageBox, QDialog)
 from .base_view import BaseView
 from controllers.solicitud_controller import SolicitudController
 from .admin_crud_view import AdminCrudView
+from .solicitud_publica_view import SolicitudPublicaView
 
 class BusquedaView(BaseView):
     def __init__(self):
@@ -37,15 +38,18 @@ class BusquedaView(BaseView):
         layout.addWidget(self.table)
         
         btn_layout = QHBoxLayout()
+        self.btn_registrar = QPushButton("Registrar Nueva")
         self.btn_modificar = QPushButton("Modificar")
         self.btn_estatus = QPushButton("Cambiar Estatus")
         self.btn_eliminar = QPushButton("Eliminar")
         self.btn_eliminar.setObjectName("btnDanger")
         
+        self.btn_registrar.clicked.connect(self.registrar_nueva)
         self.btn_modificar.clicked.connect(self.modificar_seleccion)
         self.btn_estatus.clicked.connect(self.cambiar_estatus_seleccion)
         self.btn_eliminar.clicked.connect(self.eliminar_seleccion)
         
+        btn_layout.addWidget(self.btn_registrar)
         btn_layout.addWidget(self.btn_modificar)
         btn_layout.addWidget(self.btn_estatus)
         btn_layout.addWidget(self.btn_eliminar)
@@ -150,3 +154,21 @@ class BusquedaView(BaseView):
                 else: self.buscar("nombre")
             else:
                 self.show_error(msg)
+
+    def registrar_nueva(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Registrar Nueva Solicitud (Administrador)")
+        dialog.setMinimumSize(700, 600)
+        
+        dialog_layout = QVBoxLayout()
+        reg_view = SolicitudPublicaView(registro_only=True)
+        dialog_layout.addWidget(reg_view)
+        dialog.setLayout(dialog_layout)
+        
+        dialog.exec()
+        
+        # Refresh if a search was active
+        if self.txt_curp.text().strip() and self.tabs.currentIndex() == 0:
+            self.buscar("curp")
+        elif self.txt_nombre.text().strip() and self.tabs.currentIndex() == 1:
+            self.buscar("nombre")
