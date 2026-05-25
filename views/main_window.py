@@ -96,7 +96,14 @@ class MainWindow(QMainWindow):
             pass
 
     def do_logout(self):
-        self.auth_controller.logout()
+        resp = QMessageBox.question(
+            self, "Cerrar Sesión",
+            "¿Está seguro de que desea cerrar la sesión de administrador?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        if resp == QMessageBox.StandardButton.Yes:
+            self.auth_controller.logout()
         
     def on_login_state_changed(self, data):
         self.update_menu_state()
@@ -105,4 +112,16 @@ class MainWindow(QMainWindow):
         self.stacked_widget.setCurrentWidget(view)
         
     def closeEvent(self, event):
-        QApplication.quit()
+        resp = QMessageBox.question(
+            self, "Cerrar Sistema",
+            "¿Está seguro de que desea cerrar el sistema?\nSe cerrará la sesión activa y la base de datos.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        if resp == QMessageBox.StandardButton.Yes:
+            if SessionManager().is_authenticated:
+                self.auth_controller.logout()
+            event.accept()
+            QApplication.quit()
+        else:
+            event.ignore()
