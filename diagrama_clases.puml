@@ -1,82 +1,224 @@
-@startuml
+@startuml "Diagrama de Clases - Ticket de Turno"
 skinparam handwritten false
 skinparam monochrome false
 skinparam packageStyle rectangle
 skinparam classAttributeIconSize 0
 
-' Entidades
-abstract class BaseModel {
-    +int id
+package "Models" {
+    abstract class BaseModel {
+        +int id
+    }
+    class Alumno {
+        +String curp
+        +String nombre
+        +String paterno
+        +String materno
+        +int nivel_id
+        +int municipio_id
+        +nombre_completo() : String
+    }
+    class Solicitud {
+        +int numero_turno
+        +String curp_alumno
+        +String quien_tramita
+        +String telefono_principal
+        +String telefono_secundario
+        +String correo
+        +int asunto_id
+        +int municipio_id
+        +String estatus
+        +String observaciones
+        +DateTime creado_en
+        +DateTime actualizado_en
+        +String nombre_alumno
+        +String municipio_nombre
+        +String asunto_descripcion
+    }
+    class Usuario {
+        +String username
+        +String password_hash
+        +String nombre_completo
+        +int activo
+    }
+    class Municipio {
+        +String nombre
+        +int activo
+    }
+    class NivelEducativo {
+        +String nombre
+        +int activo
+    }
+    class Asunto {
+        +String descripcion
+        +int activo
+    }
+
+    BaseModel <|-- Alumno
+    BaseModel <|-- Solicitud
+    BaseModel <|-- Usuario
+    BaseModel <|-- Municipio
+    BaseModel <|-- NivelEducativo
+    BaseModel <|-- Asunto
 }
 
-class Alumno {
-    +String curp
-    +String nombre
-    +String paterno
-    +String materno
-    +int nivel_id
-    +int municipio_id
+package "Repositories" {
+    interface BaseRepository {
+        +get_by_id(id: int) : BaseModel
+        +get_all() : List
+        +create(entity: BaseModel) : BaseModel
+        +update(entity: BaseModel) : bool
+        +delete(id: int) : bool
+    }
+    class AlumnoRepository {
+        +create_or_update(alumno: Alumno) : Alumno
+    }
+    class SolicitudRepository {
+        +get_by_curp(curp: String) : List
+        +get_by_nombre_alumno(nombre: String) : List
+        +get_by_turno_and_curp(turno: int, curp: String) : Solicitud
+        +get_next_turno_for_municipio(municipio_id: int) : int
+        +get_stats_by_municipio(municipio_id: int) : dict
+        +cambiar_estatus(id: int, estatus: String) : bool
+    }
+    class UsuarioRepository {
+        +get_by_username(username: String) : Usuario
+    }
+    class CatalogoRepository {
+        +get_municipios() : List
+        +create_municipio(nombre: String) : bool
+        +update_municipio(id: int, nombre: String) : bool
+        +delete_municipio(id: int) : bool
+        +get_niveles() : List
+        +create_nivel(nombre: String) : bool
+        +update_nivel(id: int, nombre: String) : bool
+        +delete_nivel(id: int) : bool
+        +get_asuntos() : List
+        +create_asunto(desc: String) : bool
+        +update_asunto(id: int, desc: String) : bool
+        +delete_asunto(id: int) : bool
+    }
+
+    BaseRepository <|-- AlumnoRepository
+    BaseRepository <|-- SolicitudRepository
+    BaseRepository <|-- UsuarioRepository
 }
 
-class Solicitud {
-    +String curp_alumno
-    +int numero_turno
-    +int asunto_id
-    +String quien_tramita
-    +String telefono_principal
-    +String correo
-    +String estatus
-    +DateTime fecha_registro
+package "Controllers" {
+    class AuthController {
+        +login(user: String, pass: String) : Tuple
+        +logout()
+    }
+    class SolicitudController {
+        +registrar_solicitud(datos: dict) : Tuple
+        +modificar_solicitud(curp: String, turno: int, datos: dict) : Tuple
+        +buscar_por_curp(curp: String) : List
+        +buscar_por_nombre(nombre: String) : List
+        +buscar_por_turno_y_curp(turno: int, curp: String) : Solicitud
+        +cambiar_estatus(id: int, estatus: String) : Tuple
+        +eliminar_solicitud(id: int) : Tuple
+    }
+    class AdminController {
+        +get_municipios() : List
+        +get_niveles() : List
+        +get_asuntos() : List
+        +create_catalogo(tipo: String, val: String) : bool
+        +update_catalogo(tipo: String, id: int, val: String) : bool
+        +delete_catalogo(tipo: String, id: int) : bool
+    }
+    class DashboardController {
+        +get_stats(municipio_id: int) : dict
+    }
 }
 
-class Municipio {
-    +String nombre
+package "Views" {
+    class MainWindow {
+        +stacked_widget : QStackedWidget
+        +view_publica : SolicitudPublicaView
+        +view_busqueda : BusquedaView
+        +view_catalogos : CatalogosView
+        +view_dashboard : DashboardView
+        +switch_view(view: QWidget)
+        +update_menu_state()
+    }
+    abstract class BaseView {
+        +show_info(msg: String)
+        +show_warning(msg: String)
+        +show_error(msg: String)
+    }
+    class SolicitudPublicaView {
+        +registro_only : bool
+        +guardar()
+        +buscar_para_modificar()
+        +on_curp_changed(curp: String)
+    }
+    class BusquedaView {
+        +buscar(criterio: String)
+        +modificar_seleccion()
+        +cambiar_estatus_seleccion()
+        +eliminar_seleccion()
+        +registrar_nueva()
+    }
+    class AdminCrudView {
+        +guardar()
+    }
+    class CatalogosView {
+        +add_item(tipo: String)
+        +edit_item(tipo: String)
+        +del_item(tipo: String)
+    }
+    class DashboardView {
+        +refresh_data()
+        +load_municipios()
+    }
+
+    BaseView <|-- SolicitudPublicaView
+    BaseView <|-- BusquedaView
+    BaseView <|-- CatalogosView
+    BaseView <|-- DashboardView
 }
 
-class NivelEducativo {
-    +String nombre
+package "Patterns & Utils" {
+    class DatabaseConnection <<Singleton>> {
+        -connection : Connection
+        +initialize(db_path: String)
+        +close()
+    }
+    class SessionManager <<Singleton>> {
+        -current_user : Usuario
+        +login(u: Usuario)
+        +logout()
+        +is_authenticated() : bool
+    }
+    class EventBus <<Singleton>> {
+        -subscribers : Dict
+        +subscribe(e: AppEvent, cb: Callable)
+        +unsubscribe(e: AppEvent, cb: Callable)
+        +publish(e: AppEvent, data: Any)
+        +clear_all()
+    }
+    enum AppEvent {
+        SOLICITUD_CREADA
+        SOLICITUD_ACTUALIZADA
+        SOLICITUD_ELIMINADA
+        ESTATUS_CAMBIADO
+        LOGIN_EXITOSO
+        LOGOUT
+        CATALOGO_ACTUALIZADO
+    }
 }
 
-class Asunto {
-    +String descripcion
-}
+' Relaciones cruzadas
+SolicitudController --> AlumnoRepository : usa
+SolicitudController --> SolicitudRepository : usa
+AuthController --> UsuarioRepository : usa
+AdminController --> CatalogoRepository : usa
+DashboardController --> SolicitudRepository : usa
 
-' Relaciones de Modelos
-BaseModel <|-- Alumno
-BaseModel <|-- Municipio
-BaseModel <|-- NivelEducativo
-BaseModel <|-- Asunto
+MainWindow --> AuthController : usa
+SolicitudPublicaView --> SolicitudController : usa
+BusquedaView --> SolicitudController : usa
+AdminCrudView --> SolicitudController : usa
+CatalogosView --> AdminController : usa
+DashboardView --> DashboardController : usa
 
-Alumno "1" --> "1" Municipio : Pertenece
-Alumno "1" --> "1" NivelEducativo : Cursa
-Solicitud "*" --> "1" Alumno : Registra
-Solicitud "*" --> "1" Asunto : Trata sobre
-
-' Repositorios (Patrón Repository)
-interface BaseRepository {
-    +get_all()
-    +get_by_id(id)
-    +insert(model)
-    +update(model)
-    +delete(id)
-}
-
-class SolicitudRepository {
-    +get_pendientes()
-    +get_stats_dashboard()
-    +generate_ticket_number(municipio_id)
-    +buscar_por_curp(curp)
-}
-
-class CatalogoRepository {
-    +get_municipios()
-    +get_niveles()
-    +get_asuntos()
-}
-
-BaseRepository <|-- SolicitudRepository
-BaseRepository <|-- CatalogoRepository
-
-SolicitudRepository ..> Solicitud : Manipula
-CatalogoRepository ..> Municipio : Manipula
 @enduml
