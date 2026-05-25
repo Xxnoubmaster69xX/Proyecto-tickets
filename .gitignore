@@ -17,8 +17,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Base de datos local (Opcional, pero recomendado ignorar db temporales si hay datos reales)
-# ticket_turno.db
+# Base de datos local
+ticket_turno.db
+
+# Herramientas de build
+plantuml.jar
 
 # IDEs y SO
 .vscode/
