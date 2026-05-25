@@ -52,6 +52,12 @@ package "Models" {
         +String descripcion
         +int activo
     }
+    class Bitacora {
+        +String usuario
+        +String accion
+        +String detalle
+        +DateTime creado_en
+    }
 
     BaseModel <|-- Alumno
     BaseModel <|-- Solicitud
@@ -59,6 +65,7 @@ package "Models" {
     BaseModel <|-- Municipio
     BaseModel <|-- NivelEducativo
     BaseModel <|-- Asunto
+    BaseModel <|-- Bitacora
 }
 
 package "Repositories" {
@@ -97,10 +104,15 @@ package "Repositories" {
         +update_asunto(id: int, desc: String) : bool
         +delete_asunto(id: int) : bool
     }
+    class BitacoraRepository {
+        +get_all() : List
+        +create(entity: Bitacora) : Bitacora
+    }
 
     BaseRepository <|-- AlumnoRepository
     BaseRepository <|-- SolicitudRepository
     BaseRepository <|-- UsuarioRepository
+    BaseRepository <|-- BitacoraRepository
 }
 
 package "Controllers" {
@@ -137,6 +149,7 @@ package "Views" {
         +view_busqueda : BusquedaView
         +view_catalogos : CatalogosView
         +view_dashboard : DashboardView
+        +view_bitacora : BitacoraView
         +switch_view(view: QWidget)
         +update_menu_state()
     }
@@ -170,11 +183,15 @@ package "Views" {
         +refresh_data()
         +load_municipios()
     }
+    class BitacoraView {
+        +refresh_data()
+    }
 
     BaseView <|-- SolicitudPublicaView
     BaseView <|-- BusquedaView
     BaseView <|-- CatalogosView
     BaseView <|-- DashboardView
+    BaseView <|-- BitacoraView
 }
 
 package "Patterns & Utils" {
@@ -196,6 +213,17 @@ package "Patterns & Utils" {
         +publish(e: AppEvent, data: Any)
         +clear_all()
     }
+    class AuditLogger <<Singleton>> {
+        -repo : BitacoraRepository
+        +initialize()
+        +on_solicitud_creada(s: Solicitud)
+        +on_solicitud_actualizada(s: Solicitud)
+        +on_solicitud_eliminada(id: int)
+        +on_estatus_cambiado(data: dict)
+        +on_login(u: Usuario)
+        +on_logout(data: Any)
+        +on_catalogo_actualizado(tipo: String)
+    }
     enum AppEvent {
         SOLICITUD_CREADA
         SOLICITUD_ACTUALIZADA
@@ -215,10 +243,13 @@ AdminController --> CatalogoRepository : usa
 DashboardController --> SolicitudRepository : usa
 
 MainWindow --> AuthController : usa
+MainWindow --> BitacoraView : usa
 SolicitudPublicaView --> SolicitudController : usa
 BusquedaView --> SolicitudController : usa
 AdminCrudView --> SolicitudController : usa
 CatalogosView --> AdminController : usa
 DashboardView --> DashboardController : usa
+BitacoraView --> BitacoraRepository : usa
+AuditLogger --> BitacoraRepository : usa
 
 @enduml
