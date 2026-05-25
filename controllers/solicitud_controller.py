@@ -18,10 +18,28 @@ class SolicitudController:
 
         campos_obligatorios = ['nombre', 'paterno', 'materno', 'nivel_id', 'municipio_id', 
                                'curp_alumno', 'quien_tramita', 'telefono_principal', 'correo', 'asunto_id']
+        nombres_campos = {
+            'nombre': 'Nombre', 'paterno': 'Apellido Paterno', 'materno': 'Apellido Materno',
+            'nivel_id': 'Nivel Educativo', 'municipio_id': 'Municipio', 'curp_alumno': 'CURP',
+            'quien_tramita': 'Quien realiza el trámite', 'telefono_principal': 'Teléfono Principal',
+            'correo': 'Correo Electrónico', 'asunto_id': 'Asunto'
+        }
         for c in campos_obligatorios:
             val = datos.get(c)
             if val is None or str(val).strip() == "":
-                return False, f"El campo {c} es obligatorio.", None
+                return False, f"El campo '{nombres_campos.get(c, c)}' es obligatorio.", None
+
+        # Validar formato de correo electrónico
+        import re
+        correo = datos.get('correo', '')
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', correo):
+            return False, "El correo electrónico no tiene un formato válido.", None
+
+        # Validar teléfono (al menos 10 dígitos)
+        tel = datos.get('telefono_principal', '')
+        tel_digits = re.sub(r'\D', '', tel)
+        if len(tel_digits) < 10:
+            return False, "El teléfono principal debe tener al menos 10 dígitos.", None
 
         try:
             alumno = Alumno(
