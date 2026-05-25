@@ -95,3 +95,13 @@ INSERT OR IGNORE INTO asuntos (descripcion) VALUES
 -- Contraseña hasheada (Admin123!) usando bcrypt (pre-generado)
 INSERT OR IGNORE INTO usuarios (username, password_hash, nombre_completo) VALUES 
 ('admin', '$2b$12$rJXAOYbEZD.LbJE5atdMFuL4P0OwQjP6SVDlsw5dvbYk1VuQvWYH.', 'Administrador del Sistema');
+
+-- Tabla de Bitácora de Auditoría para registrar acciones críticas del sistema
+CREATE TABLE IF NOT EXISTS bitacora (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario     TEXT NOT NULL,
+    accion      TEXT NOT NULL,
+    detalle     TEXT NOT NULL,
+    creado_en   DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+

@@ -9,6 +9,7 @@ from .solicitud_publica_view import SolicitudPublicaView
 from .busqueda_view import BusquedaView
 from .catalogos_view import CatalogosView
 from .dashboard_view import DashboardView
+from .bitacora_view import BitacoraView
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -31,11 +32,13 @@ class MainWindow(QMainWindow):
         self.view_busqueda = BusquedaView()
         self.view_catalogos = CatalogosView()
         self.view_dashboard = DashboardView()
+        self.view_bitacora = BitacoraView()
         
         self.stacked_widget.addWidget(self.view_publica)
         self.stacked_widget.addWidget(self.view_busqueda)
         self.stacked_widget.addWidget(self.view_catalogos)
         self.stacked_widget.addWidget(self.view_dashboard)
+        self.stacked_widget.addWidget(self.view_bitacora)
         
         self.create_menus()
         self.statusBar().showMessage("Modo Público")
@@ -71,10 +74,13 @@ class MainWindow(QMainWindow):
         action_catalogos.triggered.connect(lambda: self.switch_view(self.view_catalogos))
         action_dashboard = QAction("Dashboard e Informes", self)
         action_dashboard.triggered.connect(lambda: self.switch_view(self.view_dashboard))
+        action_bitacora = QAction("Bitácora de Auditoría", self)
+        action_bitacora.triggered.connect(lambda: self.switch_view(self.view_bitacora))
         
         self.menu_admin.addAction(action_buscar)
         self.menu_admin.addAction(action_catalogos)
         self.menu_admin.addAction(action_dashboard)
+        self.menu_admin.addAction(action_bitacora)
 
     def update_menu_state(self):
         is_auth = SessionManager().is_authenticated
@@ -110,6 +116,8 @@ class MainWindow(QMainWindow):
 
     def switch_view(self, view):
         self.stacked_widget.setCurrentWidget(view)
+        if hasattr(view, "refresh_data"):
+            view.refresh_data()
         
     def closeEvent(self, event):
         resp = QMessageBox.question(

@@ -19,4 +19,3 @@ class AuthController:
     def logout(self) -> None:
         SessionManager().logout()
         EventBus().publish(AppEvent.LOGOUT)
-        EventBus().clear_all()

@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import QApplication
 from database.connection import DatabaseConnection
 from views.main_window import MainWindow
 from patterns.event_bus import EventBus
+from utils.audit_logger import AuditLogger
 
 def main():
     print("[APP] Iniciando Ticket de Turno...")
@@ -11,6 +12,10 @@ def main():
     db = DatabaseConnection()
     db.initialize()
     print("[APP] Base de datos inicializada.")
+
+    # Inicializar Logger de Auditoría
+    AuditLogger().initialize()
+    print("[APP] Logger de Auditoría inicializado.")
 
     # Inicializar aplicación Qt
     app = QApplication(sys.argv)
