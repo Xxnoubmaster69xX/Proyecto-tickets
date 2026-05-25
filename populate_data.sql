@@ -1,3 +1,4 @@
+-- Modificado por Miguel para el commit
 -- Limpiar tablas principales para evitar duplicados de CURP y de numero de turno por municipio
 DELETE FROM solicitudes;
 DELETE FROM alumnos;
