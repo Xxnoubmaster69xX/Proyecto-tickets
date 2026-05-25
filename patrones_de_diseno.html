@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patrones de Diseño – Proyecto Tickets</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #090d16;
+    --bg-card: #111726;
+    --border-color: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --accent-purple: #8b5cf6;
+    --accent-blue: #3b82f6;
+    --accent-green: #10b981;
+    --accent-orange: #f97316;
+    --accent-pink: #ec4899;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* Presentation Structure */
+  .slide {
+    min-height: 100vh;
+    padding: 80px 10%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-bottom: 2px solid var(--border-color);
+    position: relative;
+  }
+
+  .slide:nth-child(even) {
+    background: radial-gradient(circle at 80% 20%, #1e1b4b 0%, var(--bg-dark) 60%);
+  }
+
+  .slide:nth-child(odd) {
+    background: radial-gradient(circle at 10% 80%, #0f172a 0%, var(--bg-dark) 60%);
+  }
+
+  .slide-num {
+    position: absolute;
+    top: 40px;
+    right: 10%;
+    font-size: 5rem;
+    font-weight: 800;
+    opacity: 0.05;
+    user-select: none;
+  }
+
+  /* Typography */
+  h1.main-title {
+    font-size: 3.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #a78bfa 0%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 20px;
+    letter-spacing: -0.02em;
+  }
+
+  h2.slide-title {
+    font-size: 2.25rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+
+  h2.slide-title span.badge {
+    font-size: 0.8rem;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+
+  .badge-creational { background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
+  .badge-structural { background: rgba(236, 72, 153, 0.15); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.3); }
+  .badge-behavioral { background: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); }
+  .badge-architectural { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+
+  .lead {
+    font-size: 1.15rem;
+    color: var(--text-secondary);
+    max-width: 800px;
+    margin-bottom: 40px;
+  }
+
+  /* Grid Layouts */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+    align-items: start;
+  }
+
+  @media (min-width: 900px) {
+    .grid-2 {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  /* Card */
+  .card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 10px 30px -15px rgba(0,0,0,0.5);
+  }
+
+  .card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: var(--text-primary);
+  }
+
+  .card-body p {
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+    font-size: 0.95rem;
+  }
+
+  /* Code Block Styling */
+  pre {
+    background-color: #0b0f19;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    padding: 20px;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    overflow-x: auto;
+    color: #e2e8f0;
+  }
+
+  .keyword { color: #ff79c6; }
+  .class-name { color: #50fa7b; }
+  .function { color: #8be9fd; }
+  .comment { color: #6272a4; font-style: italic; }
+  .string { color: #f1fa8c; }
+  .decorator { color: #ff79c6; }
+
+  /* Benefits block */
+  .benefits {
+    background: rgba(16, 185, 129, 0.05);
+    border-left: 4px solid var(--accent-green);
+    padding: 20px;
+    border-radius: 0 12px 12px 0;
+    margin-top: 20px;
+  }
+
+  .benefits h4 {
+    color: var(--accent-green);
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 1rem;
+  }
+
+  .benefits ul {
+    list-style: none;
+  }
+
+  .benefits li {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    position: relative;
+    padding-left: 20px;
+  }
+
+  .benefits li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--accent-green);
+    font-weight: bold;
+  }
+
+  .btn-print {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 9999px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3);
+    z-index: 100;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .btn-print:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 25px rgba(139, 92, 246, 0.4);
+  }
+
+  @media print {
+    .btn-print { display: none; }
+    .slide {
+      min-height: auto;
+      page-break-after: always;
+      border-bottom: none;
+      padding: 40px 0;
+      background: none !important;
+      color: #000 !important;
+    }
+    body {
+      background-color: #fff;
+      color: #000;
+    }
+    .card {
+      border: 1px solid #ccc;
+      box-shadow: none;
+      background: #fdfdfd;
+      color: #000;
+    }
+    pre {
+      background: #f5f5f5;
+      color: #000;
+      border: 1px solid #ccc;
+    }
+    .keyword, .class-name, .function, .comment, .string, .decorator {
+      color: #000 !important;
+      font-weight: bold;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <button class="btn-print" onclick="window.print()">Guardar como PDF / Imprimir</button>
+
+  <!-- SLIDE 1: PORTADA -->
+  <section class="slide">
+    <div class="slide-num">01</div>
+    <h1 class="main-title">Patrones de Diseño</h1>
+    <h2 style="font-size: 2rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 20px;">
+      Análisis técnico en Proyecto Tickets
+    </h2>
+    <p class="lead">
+      Un desglose detallado de los patrones de arquitectura y diseño aplicados en este sistema para lograr desacoplamiento, robustez y una alta mantenibilidad.
+    </p>
+    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+      <span class="pill" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 8px; font-size: 0.9rem;">
+        🏛️ Arquitectura: MVC + Repositorios
+      </span>
+      <span class="pill" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 8px; font-size: 0.9rem;">
+        ⚡ Eventos: EventBus / Observer
+      </span>
+      <span class="pill" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 8px; font-size: 0.9rem;">
+        🔄 Creacional: Singleton
+      </span>
+    </div>
+  </section>
+
+  <!-- SLIDE 2: SINGLETON -->
+  <section class="slide">
+    <div class="slide-num">02</div>
+    <h2 class="slide-title">
+      Singleton
+      <span class="badge badge-creational">Creacional</span>
+    </h2>
+    <p class="lead">
+      Garantiza que una clase tenga <strong>una única instancia</strong> en memoria durante la ejecución del programa y proporciona un punto de acceso global a ella.
+    </p>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">¿Dónde se implementa?</div>
+        <div class="card-body">
+          <p>
+            <strong>1. Conexión de base de datos:</strong> <code style="color: var(--accent-purple);">database/connection.py</code><br>
+            Asegura que SQLite tenga una sola conexión abierta desde la UI para evitar problemas de concurrencia y bloqueos.
+          </p>
+          <p>
+            <strong>2. Comunicación interna:</strong> <code style="color: var(--accent-purple);">patterns/event_bus.py</code><br>
+            Asegura que todas las vistas y controladores publiquen y escuchen eventos en el mismo canal.
+          </p>
+          <p>
+            <strong>3. Estado del usuario:</strong> <code style="color: var(--accent-purple);">utils/session_manager.py</code><br>
+            Almacena los datos de la sesión del administrador activo globalmente.
+          </p>
+          
+          <div class="benefits">
+            <h4>¿Por qué es una buena opción aquí?</h4>
+            <ul>
+              <li><strong>Evita fugas de memoria y bloqueos de archivos:</strong> Especialmente importante en SQLite, que bloquea el archivo de la base de datos si múltiples conexiones intentan escribir simultáneamente.</li>
+              <li><strong>Acceso unificado:</strong> Permite consultar el usuario autenticado desde cualquier vista de PyQt6 sin necesidad de pasar variables complejas entre widgets.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <pre><span class="comment"># database/connection.py</span>
+<span class="keyword">class</span> <span class="class-name">DatabaseConnection</span>:
+    _instance = <span class="keyword">None</span>
+    _lock = threading.Lock()
+
+    <span class="keyword">def</span> <span class="fn">__new__</span>(cls):
+        <span class="keyword">if</span> cls._instance <span class="kw">is None</span>:
+            <span class="keyword">with</span> cls._lock: <span class="comment"># Doble validación con Lock</span>
+                <span class="keyword">if</span> cls._instance <span class="kw">is None</span>:
+                    cls._instance = <span class="function">super</span>().__new__(cls)
+                    cls._instance._initialized = <span class="keyword">False</span>
+        <span class="keyword">return</span> cls._instance</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 3: OBSERVER (EVENTBUS) -->
+  <section class="slide">
+    <div class="slide-num">03</div>
+    <h2 class="slide-title">
+      Observer / Publisher-Subscriber
+      <span class="badge badge-behavioral">Comportamiento</span>
+    </h2>
+    <p class="lead">
+      Establece una relación de uno a muchos entre objetos, de forma que cuando un objeto cambia de estado (publica un evento), todos sus dependientes son notificados automáticamente.
+    </p>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">¿Dónde se implementa?</div>
+        <div class="card-body">
+          <p>
+            Clase <strong>EventBus</strong> en <code style="color: var(--accent-purple);">patterns/event_bus.py</code>.
+          </p>
+          <p>
+            Cuando el controlador realiza una acción, en lugar de interactuar directamente con la UI, publica un evento en el bus:
+          </p>
+          <pre style="margin-bottom: 15px;"><span class="comment"># En solicitud_controller.py</span>
+EventBus().publish(AppEvent.SOLICITUD_CREADA, solicitud)</pre>
+          <p>
+            La ventana principal (<code style="color: var(--accent-purple);">views/main_window.py</code>) y otras vistas reaccionan dinámicamente suscribiéndose a estos eventos.
+          </p>
+
+          <div class="benefits">
+            <h4>¿Por qué es una buena opción aquí?</h4>
+            <ul>
+              <li><strong>Desacoplamiento Absoluto (Decoupling):</strong> Los controladores que procesan las solicitudes de tickets no saben nada de PyQt6. Esto permite reutilizar los controladores en una aplicación Web o API sin cambiar el código de lógica.</li>
+              <li><strong>Actualizaciones Dinámicas:</strong> Varias pantallas se actualizan simultáneamente (Dashboard, Lista de Búsqueda) al ocurrir una acción en segundo plano.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <pre><span class="comment"># patterns/event_bus.py</span>
+<span class="keyword">class</span> <span class="class-name">EventBus</span>:
+    <span class="comment"># ... (Singleton) ...</span>
+    <span class="keyword">def</span> <span class="fn">subscribe</span>(self, event: AppEvent, callback: Callable):
+        <span class="keyword">if</span> event <span class="keyword">not in</span> self._subscribers:
+            self._subscribers[event] = []
+        self._subscribers[event].append(callback)
+
+    <span class="keyword">def</span> <span class="fn">publish</span>(self, event: AppEvent, data: Any = <span class="keyword">None</span>):
+        <span class="keyword">for</span> callback <span class="keyword">in</span> self._subscribers.get(event, []):
+            callback(data)</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 4: REPOSITORY -->
+  <section class="slide">
+    <div class="slide-num">04</div>
+    <h2 class="slide-title">
+      Repository
+      <span class="badge badge-architectural">Arquitectura</span>
+    </h2>
+    <p class="lead">
+      Funciona como un mediador entre el dominio (los modelos de la aplicación) y la capa de acceso a datos, encapsulando las consultas SQL en clases dedicadas.
+    </p>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">¿Dónde se implementa?</div>
+        <div class="card-body">
+          <p>
+            <strong>Clase Base:</strong> <code style="color: var(--accent-purple);">repositories/base_repository.py</code><br>
+            Define los métodos CRUD genéricos usando clases abstractas (<code style="color: var(--accent-purple);">ABC</code>).
+          </p>
+          <p>
+            <strong>Repositorios Concretos:</strong> en <code style="color: var(--accent-purple);">repositories/</code><br>
+            <code>SolicitudRepository</code>, <code>AlumnoRepository</code>, <code>UsuarioRepository</code> y <code>CatalogoRepository</code> ejecutan las sentencias SQL correspondientes y mapean los resultados a objetos del modelo.
+          </p>
+
+          <div class="benefits">
+            <h4>¿Por qué es una buena opción aquí?</h4>
+            <ul>
+              <li><strong>Limpieza de código:</strong> La lógica de consultas SQL está aislada. Los controladores o modelos no contienen strings con código SQL.</li>
+              <li><strong>Mapeo automático:</strong> Traduce automáticamente registros relacionales de la base de datos a instancias de clases orientadas a objetos (como <code>Solicitud</code> o <code>Alumno</code>).</li>
+              <li><strong>Facilidad de migración:</strong> Si se decide cambiar SQLite por PostgreSQL o MySQL, solo se debe cambiar el código interno de los repositorios concretos sin afectar a la UI ni a la lógica del controlador.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <pre><span class="comment"># repositories/base_repository.py</span>
+<span class="keyword">from</span> abc <span class="keyword">import</span> ABC, abstractmethod
+
+<span class="keyword">class</span> <span class="class-name">BaseRepository</span>(ABC, Generic[T]):
+    <span class="decorator">@abstractmethod</span>
+    <span class="keyword">def</span> <span class="fn">get_by_id</span>(self, id) -> Optional[T]: <span class="keyword">pass</span>
+
+    <span class="decorator">@abstractmethod</span>
+    <span class="keyword">def</span> <span class="fn">create</span>(self, entity: T) -> T: <span class="keyword">pass</span>
+
+<span class="comment"># Ejemplo de uso en Repositorio Concreto:</span>
+<span class="keyword">class</span> <span class="class-name">SolicitudRepository</span>(BaseRepository[Solicitud]):
+    <span class="keyword">def</span> <span class="fn">get_by_id</span>(self, id: int):
+        cursor = self.db.cursor()
+        cursor.execute(<span class="string">"SELECT * FROM solicitudes..."</span>)
+        <span class="keyword">return</span> self._map_row_to_entity(cursor.fetchone())</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 5: MVC -->
+  <section class="slide">
+    <div class="slide-num">05</div>
+    <h2 class="slide-title">
+      Model-View-Controller (MVC)
+      <span class="badge badge-architectural">Arquitectura</span>
+    </h2>
+    <p class="lead">
+      El patrón estructural maestro de la aplicación. Divide el sistema en tres componentes interconectados para separar la representación de la información de la interacción del usuario.
+    </p>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">¿Cómo está estructurado en el proyecto?</div>
+        <div class="card-body">
+          <p>
+            <strong>1. Modelos (<code>models/</code>):</strong> Representan las entidades del negocio (BaseModel, Alumno, Usuario, Solicitud). Contienen datos puros.
+          </p>
+          <p>
+            <strong>2. Vistas (<code>views/</code>):</strong> Desarrolladas en PyQt6. Son responsables del diseño visual, los botones, formularios y widgets (<code>MainWindow</code>, <code>SolicitudPublicaView</code>, etc.). No procesan datos.
+          </p>
+          <p>
+            <strong>3. Controladores (<code>controllers/</code>):</strong> Actúan como puentes. Reciben los datos y eventos de la vista, los validan y ejecutan las acciones llamando a los repositorios correspondientes (<code>SolicitudController</code>, <code>AuthController</code>).
+          </p>
+
+          <div class="benefits">
+            <h4>¿Por qué es una buena opción aquí?</h4>
+            <ul>
+              <li><strong>Código modular:</strong> Varios desarrolladores pueden trabajar simultáneamente (uno en el diseño visual de la UI y otro en la lógica del backend) sin pisarse el código.</li>
+              <li><strong>Fácil de mantener:</strong> Si un cálculo de negocio cambia, solo se modifica en el controlador, la vista queda intacta.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div style="background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 30px;">
+        <h3 style="margin-bottom: 20px; font-size: 1.1rem; font-weight: 600;">Flujo de Datos MVC en el Sistema</h3>
+        
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+          <div style="background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.2); padding: 12px; border-radius: 8px;">
+            <strong style="color: var(--accent-pink);">1. VISTA:</strong> El administrador presiona "Registrar Solicitud" enviando un diccionario de datos.
+          </div>
+          <div style="text-align: center; color: var(--text-secondary);">↓</div>
+          <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); padding: 12px; border-radius: 8px;">
+            <strong style="color: var(--accent-blue);">2. CONTROLADOR:</strong> Valida la CURP y las reglas del negocio, instancia el modelo Alumno y llama al Repositorio.
+          </div>
+          <div style="text-align: center; color: var(--text-secondary);">↓</div>
+          <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.2); padding: 12px; border-radius: 8px;">
+            <strong style="color: var(--accent-purple);">3. MODELO & REPOSITORIO:</strong> Se ejecuta el comando SQL e inserta los datos de forma estructurada.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 6: TEMPLATE METHOD -->
+  <section class="slide">
+    <div class="slide-num">06</div>
+    <h2 class="slide-title">
+      Template Method
+      <span class="badge badge-behavioral">Comportamiento</span>
+    </h2>
+    <p class="lead">
+      Define el esqueleto de un algoritmo o comportamiento común en una superclase, delegando o permitiendo que las subclases hereden y utilicen este comportamiento sin duplicar código.
+    </p>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">¿Dónde se implementa?</div>
+        <div class="card-body">
+          <p>
+            <strong>1. BaseView:</strong> <code style="color: var(--accent-purple);">views/base_view.py</code><br>
+            Todas las vistas del sistema (<code>LoginView</code>, <code>BusquedaView</code>, etc.) heredan de <code>BaseView</code>. Esta clase define métodos comunes para alertar al usuario: <code>show_error</code>, <code>show_info</code> y <code>show_warning</code>.
+          </p>
+          <p>
+            <strong>2. BaseModel:</strong> <code style="color: var(--accent-purple);">models/base_model.py</code><br>
+            Todos los modelos heredan de <code>BaseModel</code>, el cual implementa de forma genérica la transformación de datos a diccionario (<code>to_dict</code>) y la representación en texto (<code>__repr__</code>).
+          </p>
+
+          <div class="benefits">
+            <h4>¿Por qué es una buena opción aquí?</h4>
+            <ul>
+              <li><strong>Evita la duplicación de código (DRY - Don't Repeat Yourself):</strong> No es necesario escribir código para mostrar cuadros de diálogo de error de PyQt6 en cada pantalla. Solo se llama a <code>self.show_error(...)</code>.</li>
+              <li><strong>Consistencia:</strong> Todos los errores y mensajes se muestran de la misma forma en cualquier punto del sistema.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <pre><span class="comment"># views/base_view.py</span>
+<span class="keyword">from</span> PyQt6.QtWidgets <span class="keyword">import</span> QWidget, QMessageBox
+
+<span class="keyword">class</span> <span class="class-name">BaseView</span>(QWidget):
+    <span class="keyword">def</span> <span class="fn">show_error</span>(self, message: str, title: str = <span class="string">"Error"</span>):
+        QMessageBox.critical(self, title, message)
+
+    <span class="keyword">def</span> <span class="fn">show_info</span>(self, message: str, title: str = <span class="string">"Información"</span>):
+        QMessageBox.information(self, title, message)
+
+<span class="comment"># Heredado en views/catalogos_view.py por ejemplo:</span>
+<span class="keyword">class</span> <span class="class-name">CatalogosView</span>(BaseView):
+    <span class="keyword">def</span> <span class="fn">guardar</span>(self):
+        <span class="keyword">if</span> error:
+            self.<span class="function">show_error</span>(<span class="string">"No se pudo guardar el catálogo"</span>)</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 7: RESUMEN Y VALOR -->
+  <section class="slide">
+    <div class="slide-num">07</div>
+    <h2 class="slide-title">Conclusión y Calidad de Software</h2>
+    <p class="lead">
+      La combinación de estos patrones no es casualidad; es una decisión de ingeniería que eleva la calidad del software.
+    </p>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">Métricas de Calidad de Software Beneficiadas</div>
+        <div class="card-body">
+          <p>
+            <strong>Mantenibilidad:</strong> Cambiar el diseño visual de un formulario PyQt6 no impactará en las reglas del negocio de los tickets (MVC).
+          </p>
+          <p>
+            <strong>Acoplamiento Bajo:</strong> Las vistas no conocen a la base de datos ni a los controladores de forma rígida gracias al <code>EventBus</code> y a la abstracción de <code>Repository</code>.
+          </p>
+          <p>
+            <strong>Extensibilidad:</strong> Agregar un nuevo flujo de trabajo o auditoría ante la creación de un ticket se realiza simplemente suscribiendo un nuevo método a <code>AppEvent.SOLICITUD_CREADA</code> sin alterar el código existente.
+          </p>
+        </div>
+      </div>
+
+      <div class="card" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);">
+        <div class="card-title" style="color: var(--accent-blue);">Consejo para la Presentación</div>
+        <div class="card-body">
+          <p>
+            Este archivo ha sido guardado como un documento HTML interactivo. Puedes abrirlo directamente en tu navegador y presentarlo como diapositivas.
+          </p>
+          <p>
+            <strong>Para guardarlo como PDF:</strong><br>
+            Presiona el botón en la esquina inferior derecha o presiona <kbd style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Ctrl + P</kbd> en tu navegador y selecciona "Guardar como PDF". El diseño está optimizado para ajustarse automáticamente al tamaño de página.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>
