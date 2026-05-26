@@ -6,7 +6,7 @@ const CURP_REGEX = /^[A-Z]{1}[AEIOU]{1}[A-Z]{2}[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|1[
 
 export default function PublicRegistration() {
   const [catalogs, setCatalogs] = useState({ municipios: [], niveles: [], asuntos: [] });
-  const [mode, setMode] = useState<'nuevo' | 'modificar'>('nuevo');
+  const [mode, setMode] = useState<'nuevo' | 'modificar' | 'consultar'>('nuevo');
   const [turnoMod, setTurnoMod] = useState('');
   
   const [form, setForm] = useState({
@@ -26,6 +26,7 @@ export default function PublicRegistration() {
   
   const [status, setStatus] = useState({ loading: false, msg: '', type: '' });
   const [successData, setSuccessData] = useState<any>(null);
+  const [foundTicketId, setFoundTicketId] = useState<number | null>(null);
 
   const curpValid = form.curp_alumno.length === 18 && CURP_REGEX.test(form.curp_alumno);
   const isFormValid = curpValid && form.nombre && form.paterno && form.materno && form.nivel_id && form.municipio_id && form.asunto_id && form.quien_tramita && form.telefono_principal && form.correo;
@@ -51,8 +52,12 @@ export default function PublicRegistration() {
   }, []);
 
   const handleSearchToModify = async () => {
-    if (!curpValid || !turnoMod) {
-      setStatus({ loading: false, msg: 'Ingrese CURP válida y Número de Turno', type: 'error' });
+    if (!curpValid) {
+      setStatus({ loading: false, msg: 'Ingrese una CURP válida para buscar', type: 'error' });
+      return;
+    }
+    if (mode === 'modificar' && !turnoMod) {
+      setStatus({ loading: false, msg: 'Para modificar necesita ingresar su Número de Turno', type: 'error' });
       return;
     }
     
@@ -61,7 +66,14 @@ export default function PublicRegistration() {
       const res = await fetch(`http://localhost:8000/api/solicitudes/buscar?curp=${form.curp_alumno}`);
       const data = await res.json();
       
-      const found = data.find((d:any) => d.numero_turno.toString() === turnoMod);
+      let found;
+      if (mode === 'consultar') {
+        // En consulta, si hay varios, agarramos el más reciente (o primero).
+        // En una app real podríamos mostrar una lista de tickets.
+        found = data.length > 0 ? data[data.length - 1] : null;
+      } else {
+        found = data.find((d:any) => d.numero_turno.toString() === turnoMod);
+      }
       
       if (found) {
         setForm({
@@ -78,12 +90,19 @@ export default function PublicRegistration() {
           correo: found.correo || '',
           observaciones: found.observaciones || ''
         });
-        setStatus({ loading: false, msg: 'Solicitud encontrada. Puede modificar datos de contacto y asunto.', type: 'success' });
+        setFoundTicketId(found.id);
+        if (mode === 'consultar') {
+          setStatus({ loading: false, msg: 'Solicitud encontrada. Estatus: ' + found.estatus, type: 'success' });
+        } else {
+          setStatus({ loading: false, msg: 'Solicitud encontrada. Puede modificar datos de contacto y asunto.', type: 'success' });
+        }
       } else {
         setStatus({ loading: false, msg: 'No se encontró una solicitud con esos datos', type: 'error' });
+        setFoundTicketId(null);
       }
     } catch (err) {
       setStatus({ loading: false, msg: 'Error de conexión', type: 'error' });
+      setFoundTicketId(null);
     }
   };
 
@@ -135,7 +154,11 @@ export default function PublicRegistration() {
   };
 
   const handleDownload = () => {
-    window.open(`http://localhost:8000/api/solicitudes/${successData.id}/pdf`, '_blank');
+    if (successData) window.open(`http://localhost:8000/api/solicitudes/${successData.id}/pdf`, '_blank');
+  };
+
+  const handleReprint = () => {
+    if (foundTicketId) window.open(`http://localhost:8000/api/solicitudes/${foundTicketId}/pdf`, '_blank');
   };
 
   if (successData) {
@@ -184,18 +207,24 @@ export default function PublicRegistration() {
         </div>
       </div>
 
-      <div className="flex space-x-1 bg-surfaceLight p-1 rounded-xl mb-6 max-w-sm">
+      <div className="flex space-x-1 bg-surfaceLight p-1 rounded-xl mb-6 max-w-2xl">
         <button
-          onClick={() => { setMode('nuevo'); setStatus({ loading: false, msg: '', type: ''}); }}
+          onClick={() => { setMode('nuevo'); setStatus({ loading: false, msg: '', type: ''}); setFoundTicketId(null); }}
           className={clsx("w-full py-2.5 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2", mode === 'nuevo' ? 'bg-primary text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5')}
         >
           <Ticket className="w-4 h-4" /> Nuevo Registro
         </button>
         <button
-          onClick={() => { setMode('modificar'); setStatus({ loading: false, msg: '', type: ''}); }}
+          onClick={() => { setMode('consultar'); setStatus({ loading: false, msg: '', type: ''}); setFoundTicketId(null); }}
+          className={clsx("w-full py-2.5 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2", mode === 'consultar' ? 'bg-primary text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5')}
+        >
+          <Search className="w-4 h-4" /> Consultar Turno
+        </button>
+        <button
+          onClick={() => { setMode('modificar'); setStatus({ loading: false, msg: '', type: ''}); setFoundTicketId(null); }}
           className={clsx("w-full py-2.5 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2", mode === 'modificar' ? 'bg-primary text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5')}
         >
-          <Edit3 className="w-4 h-4" /> Modificar Turno
+          <Edit3 className="w-4 h-4" /> Modificar Datos
         </button>
       </div>
 
@@ -212,22 +241,36 @@ export default function PublicRegistration() {
           </div>
         )}
 
-        {mode === 'modificar' && (
+        {(mode === 'modificar' || mode === 'consultar') && (
           <div className="mb-6 p-4 bg-surfaceLight rounded-xl border border-gray-700 flex gap-4 items-end">
              <div className="flex-1">
               <label className="block text-sm font-medium text-gray-300 mb-1">CURP Registrada</label>
               <input value={form.curp_alumno} onChange={e => setForm({...form, curp_alumno: e.target.value.toUpperCase()})} className={clsx("input-field font-mono", form.curp_alumno && (curpValid ? 'border-green-500 focus:ring-green-500' : 'border-red-500 focus:ring-red-500'))} placeholder="18 caracteres" maxLength={18} />
             </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-300 mb-1">Número de Turno</label>
-              <input value={turnoMod} onChange={e => setTurnoMod(e.target.value)} type="number" className="input-field" placeholder="Ej. 1" />
-            </div>
-            <button onClick={handleSearchToModify} disabled={!curpValid || !turnoMod || status.loading} className="btn-secondary h-[42px] flex items-center justify-center gap-2 px-6">
+            {mode === 'modificar' && (
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">Número de Turno</label>
+                <input value={turnoMod} onChange={e => setTurnoMod(e.target.value)} type="number" className="input-field" placeholder="Requerido para modificar" />
+              </div>
+            )}
+            <button onClick={handleSearchToModify} disabled={!curpValid || (mode === 'modificar' && !turnoMod) || status.loading} className="btn-secondary h-[42px] flex items-center justify-center gap-2 px-6">
               <Search className="w-4 h-4" /> Buscar
             </button>
           </div>
         )}
 
+        {mode === 'consultar' && foundTicketId && (
+          <div className="flex flex-col items-center justify-center p-8 bg-surface rounded-xl border border-gray-700 mt-4 text-center">
+            <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
+            <h3 className="text-2xl font-bold text-white mb-2">Ticket Encontrado</h3>
+            <p className="text-gray-400 mb-6">Puede descargar una copia en PDF del comprobante original de su turno.</p>
+            <button onClick={handleReprint} className="btn-primary flex items-center gap-2 px-8 py-3 text-lg">
+              <Download className="w-5 h-5" /> Descargar Comprobante PDF
+            </button>
+          </div>
+        )}
+
+        {mode !== 'consultar' && (
         <form onSubmit={handleSubmit} className={clsx("relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6 p-4", mode === 'modificar' && !form.quien_tramita && 'opacity-50 pointer-events-none')}>
           
           <div className="space-y-4 md:col-span-2">
@@ -306,13 +349,20 @@ export default function PublicRegistration() {
             <textarea rows={3} value={form.observaciones} onChange={e => setForm({...form, observaciones: e.target.value})} className="input-field resize-none bg-black/20" placeholder="Información adicional..."></textarea>
           </div>
 
-          <div className="md:col-span-2 pt-6">
-            <button type="submit" disabled={status.loading || !isFormValid} className={clsx("w-full md:w-auto px-8 py-3 float-right flex items-center justify-center gap-2 font-bold rounded-lg shadow-lg transition-all", isFormValid ? 'bg-primary hover:bg-primaryHover text-white shadow-primary/20' : 'bg-gray-700 text-gray-400 cursor-not-allowed')}>
+          <div className="md:col-span-2 pt-6 flex flex-col md:flex-row justify-end gap-4">
+            {mode === 'modificar' && foundTicketId && (
+              <button type="button" onClick={handleReprint} className="px-8 py-3 flex items-center justify-center gap-2 font-bold rounded-lg border border-primary text-primary hover:bg-primary/10 transition-all">
+                <Download className="w-5 h-5" />
+                Reimprimir Ticket (PDF)
+              </button>
+            )}
+            <button type="submit" disabled={status.loading || !isFormValid} className={clsx("px-8 py-3 flex items-center justify-center gap-2 font-bold rounded-lg shadow-lg transition-all", isFormValid ? 'bg-primary hover:bg-primaryHover text-white shadow-primary/20' : 'bg-gray-700 text-gray-400 cursor-not-allowed')}>
               {mode === 'nuevo' ? <Send className="w-5 h-5" /> : <Save className="w-5 h-5" />}
               {status.loading ? 'Procesando...' : (mode === 'nuevo' ? 'Generar Ticket de Turno' : 'Guardar Cambios')}
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

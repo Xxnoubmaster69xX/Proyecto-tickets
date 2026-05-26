@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Eye, RefreshCw, Edit3, Trash2, X, Save } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Eye, RefreshCw, Edit3, Trash2, X, Save, ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal, FilterX } from 'lucide-react';
 import clsx from 'clsx';
+import { useExcelTable } from '../hooks/useExcelTable';
 
 export default function AdminSearch() {
   const [query, setQuery] = useState('');
@@ -11,6 +12,18 @@ export default function AdminSearch() {
   // Edit Modal State
   const [editingTicket, setEditingTicket] = useState<any>(null);
   const [catalogos, setCatalogos] = useState({ asuntos: [], municipios: [] });
+
+  const columns = useMemo(() => [
+    { key: 'numero_turno', type: 'number' as const, label: 'Turno' },
+    { key: 'municipio_nombre', type: 'string' as const, label: 'Ubicación' },
+    { key: 'nombre_alumno', type: 'string' as const, label: 'Estudiante' },
+    { key: 'quien_tramita', type: 'string' as const, label: 'Tutor' },
+    { key: 'curp_alumno', type: 'string' as const, label: 'CURP' },
+    { key: 'asunto_descripcion', type: 'string' as const, label: 'Asunto' },
+    { key: 'estatus', type: 'string' as const, label: 'Estatus' },
+  ], []);
+
+  const [showExcelFilters, setShowExcelFilters] = useState(true);
 
   const performSearch = async () => {
     setLoading(true);
@@ -32,6 +45,17 @@ export default function AdminSearch() {
       fetch('http://localhost:8000/api/catalogos/municipio').then(r => r.json())
     ]).then(([asuntos, municipios]) => setCatalogos({ asuntos, municipios }));
   }, []);
+
+  const {
+    filteredAndSortedData,
+    filters,
+    validationErrors,
+    sortField,
+    sortDirection,
+    handleFilterChange,
+    handleSort,
+    clearFilters,
+  } = useExcelTable(results, columns);
 
   const handleStatusChange = async (id: number, currentStatus: string) => {
     if (!confirm('¿Cambiar estatus?')) return;
@@ -78,9 +102,29 @@ export default function AdminSearch() {
           <h1 className="text-3xl font-bold text-white">Búsqueda y Gestión</h1>
           <p className="text-gray-400">Modifica o elimina tickets del sistema</p>
         </div>
+        <div className="flex gap-2 mt-4 sm:mt-0">
+          <button 
+            onClick={() => setShowExcelFilters(!showExcelFilters)} 
+            className={clsx("btn-secondary flex items-center gap-2 text-sm px-4 py-2 border-gray-800", showExcelFilters && "bg-white/10 text-white border-white/20")}
+            title="Mostrar/Ocultar Filtros de Excel"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            {showExcelFilters ? "Ocultar Filtros" : "Mostrar Filtros"}
+          </button>
+          {(Object.values(filters).some(Boolean) || sortField) && (
+            <button 
+              onClick={clearFilters} 
+              className="btn-secondary flex items-center gap-2 text-sm px-4 py-2 border-red-500/30 hover:border-red-500/50 hover:bg-red-500/10 text-red-400"
+              title="Restablecer todos los filtros y orden"
+            >
+              <FilterX className="w-4 h-4" />
+              Limpiar Filtros
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="glass-panel p-6 flex flex-col md:flex-row gap-4 items-end">
+      <div className="liquid-glass-panel p-6 flex flex-col md:flex-row gap-4 items-end">
         <div className="w-full md:w-1/4">
           <label className="block text-sm font-medium text-gray-400 mb-1">Buscar por</label>
           <select value={type} onChange={e => setType(e.target.value)} className="input-field">
@@ -107,27 +151,186 @@ export default function AdminSearch() {
         </button>
       </div>
 
-      <div className="glass-panel overflow-hidden">
+      <div className="liquid-glass-panel overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-300">
             <thead className="text-xs uppercase bg-surfaceLight/50 text-gray-400 border-b border-gray-800">
               <tr>
-                <th className="px-6 py-4">Turno</th>
-                <th className="px-6 py-4">Estudiante</th>
-                <th className="px-6 py-4">CURP</th>
-                <th className="px-6 py-4">Asunto</th>
-                <th className="px-6 py-4">Estatus</th>
-                <th className="px-6 py-4 text-right">Acciones</th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-white/5 hover:text-white select-none transition-colors" onClick={() => handleSort('numero_turno')}>
+                  <div className="flex items-center gap-1.5">
+                    <span>Turno</span>
+                    {sortField === 'numero_turno' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-primary" /> : <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                    ) : (
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-40 hover:opacity-100" />
+                    )}
+                  </div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-white/5 hover:text-white select-none transition-colors" onClick={() => handleSort('municipio_nombre')}>
+                  <div className="flex items-center gap-1.5">
+                    <span>Ubicación</span>
+                    {sortField === 'municipio_nombre' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-primary" /> : <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                    ) : (
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-40 hover:opacity-100" />
+                    )}
+                  </div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-white/5 hover:text-white select-none transition-colors" onClick={() => handleSort('nombre_alumno')}>
+                  <div className="flex items-center gap-1.5">
+                    <span>Estudiante</span>
+                    {sortField === 'nombre_alumno' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-primary" /> : <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                    ) : (
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-40 hover:opacity-100" />
+                    )}
+                  </div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-white/5 hover:text-white select-none transition-colors" onClick={() => handleSort('quien_tramita')}>
+                  <div className="flex items-center gap-1.5">
+                    <span>Tutor</span>
+                    {sortField === 'quien_tramita' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-primary" /> : <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                    ) : (
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-40 hover:opacity-100" />
+                    )}
+                  </div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-white/5 hover:text-white select-none transition-colors" onClick={() => handleSort('curp_alumno')}>
+                  <div className="flex items-center gap-1.5">
+                    <span>CURP</span>
+                    {sortField === 'curp_alumno' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-primary" /> : <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                    ) : (
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-40 hover:opacity-100" />
+                    )}
+                  </div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-white/5 hover:text-white select-none transition-colors" onClick={() => handleSort('asunto_descripcion')}>
+                  <div className="flex items-center gap-1.5">
+                    <span>Asunto</span>
+                    {sortField === 'asunto_descripcion' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-primary" /> : <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                    ) : (
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-40 hover:opacity-100" />
+                    )}
+                  </div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-white/5 hover:text-white select-none transition-colors" onClick={() => handleSort('estatus')}>
+                  <div className="flex items-center gap-1.5">
+                    <span>Estatus</span>
+                    {sortField === 'estatus' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-primary" /> : <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                    ) : (
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-40 hover:opacity-100" />
+                    )}
+                  </div>
+                </th>
+                <th className="px-6 py-4 text-right select-none">Acciones</th>
               </tr>
+              {showExcelFilters && (
+                <tr className="bg-surfaceLight/30 border-b border-gray-800">
+                  {/* Turno */}
+                  <th className="px-4 py-2 font-normal">
+                    <div className="relative">
+                      <input
+                        value={filters['numero_turno'] || ''}
+                        onChange={e => handleFilterChange('numero_turno', e.target.value)}
+                        placeholder="Filtrar (ej: >2)"
+                        className={clsx(
+                          "w-full text-xs bg-black/40 border rounded px-2.5 py-1.5 text-white placeholder-gray-500 focus:outline-none focus:border-primary",
+                          validationErrors['numero_turno'] ? 'border-red-500 focus:border-red-500' : 'border-gray-800/80'
+                        )}
+                      />
+                      {validationErrors['numero_turno'] && (
+                        <div className="absolute left-0 top-full mt-1 bg-red-950/95 text-red-400 border border-red-800/50 text-[10px] p-1.5 rounded shadow-xl z-20 whitespace-nowrap">
+                          {validationErrors['numero_turno']}
+                        </div>
+                      )}
+                    </div>
+                  </th>
+                  {/* Ubicación */}
+                  <th className="px-4 py-2 font-normal">
+                    <input
+                      value={filters['municipio_nombre'] || ''}
+                      onChange={e => handleFilterChange('municipio_nombre', e.target.value)}
+                      placeholder="Filtrar ubicación..."
+                      className="w-full text-xs bg-black/40 border border-gray-800/80 rounded px-2.5 py-1.5 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+                    />
+                  </th>
+                  {/* Estudiante */}
+                  <th className="px-4 py-2 font-normal">
+                    <input
+                      value={filters['nombre_alumno'] || ''}
+                      onChange={e => handleFilterChange('nombre_alumno', e.target.value)}
+                      placeholder="Filtrar estudiante..."
+                      className="w-full text-xs bg-black/40 border border-gray-800/80 rounded px-2.5 py-1.5 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+                    />
+                  </th>
+                  {/* Tutor */}
+                  <th className="px-4 py-2 font-normal">
+                    <input
+                      value={filters['quien_tramita'] || ''}
+                      onChange={e => handleFilterChange('quien_tramita', e.target.value)}
+                      placeholder="Filtrar tutor..."
+                      className="w-full text-xs bg-black/40 border border-gray-800/80 rounded px-2.5 py-1.5 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+                    />
+                  </th>
+                  {/* CURP */}
+                  <th className="px-4 py-2 font-normal">
+                    <input
+                      value={filters['curp_alumno'] || ''}
+                      onChange={e => handleFilterChange('curp_alumno', e.target.value)}
+                      placeholder="Filtrar CURP..."
+                      className="w-full text-xs bg-black/40 border border-gray-800/80 rounded px-2.5 py-1.5 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+                    />
+                  </th>
+                  {/* Asunto */}
+                  <th className="px-4 py-2 font-normal">
+                    <input
+                      value={filters['asunto_descripcion'] || ''}
+                      onChange={e => handleFilterChange('asunto_descripcion', e.target.value)}
+                      placeholder="Filtrar asunto..."
+                      className="w-full text-xs bg-black/40 border border-gray-800/80 rounded px-2.5 py-1.5 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+                    />
+                  </th>
+                  {/* Estatus */}
+                  <th className="px-4 py-2 font-normal">
+                    <select
+                      value={filters['estatus'] || ''}
+                      onChange={e => handleFilterChange('estatus', e.target.value)}
+                      className="w-full text-xs bg-black/40 border border-gray-800/80 rounded px-2.5 py-1.5 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+                    >
+                      <option value="">Todos</option>
+                      <option value="Pendiente">Pendiente</option>
+                      <option value="Resuelto">Resuelto</option>
+                    </select>
+                  </th>
+                  {/* Acciones */}
+                  <th className="px-4 py-2 text-right">
+                    {(Object.values(filters).some(Boolean) || sortField) && (
+                      <button 
+                        onClick={clearFilters} 
+                        className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-md transition-all inline-flex items-center justify-center" 
+                        title="Limpiar filtros"
+                      >
+                        <FilterX className="w-4 h-4" />
+                      </button>
+                    )}
+                  </th>
+                </tr>
+              )}
             </thead>
             <tbody>
-              {results.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-8 text-gray-500">No se encontraron resultados</td></tr>
+              {filteredAndSortedData.length === 0 ? (
+                <tr><td colSpan={8} className="text-center py-8 text-gray-500">No se encontraron resultados</td></tr>
               ) : (
-                results.map((r:any) => (
+                filteredAndSortedData.map((r:any) => (
                   <tr key={r.id} onDoubleClick={() => setEditingTicket({...r})} className="border-b border-gray-800/50 hover:bg-white/5 transition-all cursor-pointer">
                     <td className="px-6 py-4 font-bold text-white">#{r.numero_turno}</td>
+                    <td className="px-6 py-4">{r.municipio_nombre}</td>
                     <td className="px-6 py-4 font-medium">{r.nombre_alumno}</td>
+                    <td className="px-6 py-4 text-xs text-gray-400">{r.quien_tramita}</td>
                     <td className="px-6 py-4 font-mono text-xs">{r.curp_alumno}</td>
                     <td className="px-6 py-4">{r.asunto_descripcion}</td>
                     <td className="px-6 py-4">
@@ -163,7 +366,7 @@ export default function AdminSearch() {
       {/* Edit Modal */}
       {editingTicket && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
-          <div className="glass-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
+          <div className="liquid-glass-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
             <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-surfaceLight/50 sticky top-0 z-10">
               <div>
                 <h3 className="text-xl font-bold text-white">Modificar Ticket #{editingTicket.numero_turno}</h3>

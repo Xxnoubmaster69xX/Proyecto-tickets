@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Optional
 
 # Ensure project root is in PYTHONPATH
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -39,9 +40,9 @@ def login(req: LoginRequest):
 
 # DASHBOARD
 @app.get("/api/dashboard/stats")
-def get_stats(municipio_id: int = None):
+def get_stats(municipio_id: Optional[int] = None, asunto_id: Optional[int] = None, nivel_id: Optional[int] = None):
     dash = DashboardController()
-    return dash.get_stats(municipio_id)
+    return dash.get_stats(municipio_id, asunto_id, nivel_id)
 
 # SOLICITUDES
 @app.post("/api/solicitudes")

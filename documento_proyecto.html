@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Proyecto: Ticket de Turno</title>
+    
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: false, theme: 'default', themeVariables: { fontFamily: 'Outfit' }, securityLevel: 'loose' });
+
+      const explanations = {
+          "Interfaces Liquid Glass": "Interfaz gráfica desarrollada con React y TailwindCSS. Utiliza efectos de desenfoque (backdrop-filter) y transparencias para un diseño vanguardista 'Liquid Glass'.",
+          "Estado y Validaciones": "Implementación de validaciones estrictas (Regex para CURP) y gestión dinámica del estado de la aplicación mediante Custom Hooks de React.",
+          "Endpoints REST API": "Capa de comunicación construida sobre FastAPI que expone servicios asíncronos. Recibe peticiones HTTP, valida los payloads JSON y emite respuestas con códigos de estado estandarizados.",
+          "Controladores / Reglas": "Módulos de Python que contienen la lógica de negocio pura. Orquestan la asignación algorítmica de turnos particionados por municipio sin interactuar directamente con la base de datos.",
+          "Patrón Repository": "Patrón de diseño estructural que abstrae el motor de base de datos. Aísla las sentencias SQL, permitiendo intercambiar el motor (ej. a PostgreSQL) sin alterar la lógica superior.",
+          "SQLite 3 Relacional": "Motor de base de datos embebido. Estructurado con llaves primarias (PK) y foráneas (FK) garantizando la integridad referencial hasta la 3ra Forma Normal (3FN).",
+          "Clases de Datos": "Dataclasses en Python que representan las entidades del sistema en memoria (Modelos), facilitando la serialización y des-serialización de la información.",
+          "ALUMNOS": "Entidad maestra (Catálogo). Utiliza la CURP oficial como Llave Primaria (PK). Asegura que un alumno no se registre dos veces con datos diferentes, manteniendo la consistencia de la data.",
+          "SOLICITUDES": "Tabla transaccional central. Relaciona todas las entidades mediante Llaves Foráneas (FK). Controla el Estatus y registra los timestamps de creación y actualización.",
+          "MUNICIPIOS": "Catálogo administrativo. Permite aislar matemáticamente la generación de turnos (El turno #1 de un municipio es independiente del turno #1 de otro).",
+          "ASUNTOS": "Catálogo dinámico de trámites (Inscripciones, Becas, etc.). Administrable desde el panel de control y sincronizado globalmente mediante un Event Bus.",
+          "ADMINISTRADOR": "Entidad de seguridad de alto nivel. Almacena las credenciales con contraseñas encriptadas mediante hashing criptográfico (Bcrypt con salting).",
+          "NIVELES_EDUCATIVOS": "Catálogo para segmentar la escolaridad del alumno, crucial para las métricas del Dashboard Analítico.",
+          "Padre/Tutor": "Actor principal del portal público. Interactúa de forma transparente con el sistema sin requerir autenticación previa.",
+          "Ventanilla Pública": "Interfaz reactiva expuesta a los ciudadanos para el agendamiento y seguimiento de citas ciudadanas.",
+          "Backend (FastAPI)": "Servidor de alto rendimiento impulsado por Uvicorn y Starlette que procesa miles de peticiones asíncronas concurrentemente.",
+          "Base de Datos": "Capa de persistencia segura en disco mediante SQLite3 protegida nativamente contra ataques de Inyección SQL.",
+          "Autenticación Segura": "Validación de credenciales usando encriptación. Protege las rutas administrativas (Endpoints privados) rechazando accesos no autorizados.",
+          "Dashboard Analítico": "Módulo estadístico directivo que renderiza gráficos vectoriales en tiempo real (Recharts) procesando los KPIs del sistema.",
+          "Gestión de Tickets": "Interfaz administrativa compleja para consultar, auditar y resolver de manera eficiente los trámites ciudadanos.",
+          "Gestión de Catálogos": "Módulo CRUD (Create, Read, Update, Delete) asíncrono que permite a los administradores moldear las opciones del sistema en tiempo real."
+      };
+
+      function getExplanation(text) {
+          for (const key in explanations) {
+              if (text.includes(key) || key.includes(text)) {
+                  return explanations[key];
+              }
+          }
+          return "Módulo clave del flujo de ejecución. Transforma, valida o transfiere datos hacia el siguiente nodo de la arquitectura garantizando la robustez del sistema.";
+      }
+
+      window.addEventListener('DOMContentLoaded', async () => {
+          await mermaid.run(); 
+          
+          const tooltip = document.getElementById('floatingTooltip');
+
+          // Delegación de eventos para Tooltip Hover (Funciona en SVG original y en el clonado)
+          document.addEventListener('mouseover', (e) => {
+              const node = e.target.closest('.mermaid svg .node, .mermaid svg .entityBox, .mermaid svg .actor');
+              if (node) {
+                  node.style.cursor = 'help';
+                  node.style.transition = 'all 0.2s ease';
+                  node.style.filter = 'drop-shadow(0 0 10px rgba(59, 130, 246, 0.9))';
+                  
+                  const textContent = node.textContent.trim();
+                  const info = getExplanation(textContent);
+                  
+                  tooltip.innerHTML = `<strong style="color:var(--accent); font-size:1.1rem; display:block; margin-bottom:0.3rem; font-family:'Outfit'">${textContent}</strong>${info}`;
+                  tooltip.style.opacity = '1';
+              }
+          });
+
+          document.addEventListener('mousemove', (e) => {
+              if (tooltip.style.opacity === '1') {
+                  tooltip.style.left = (e.clientX + 15) + 'px';
+                  tooltip.style.top = (e.clientY + 15) + 'px';
+              }
+          });
+
+          document.addEventListener('mouseout', (e) => {
+              const node = e.target.closest('.mermaid svg .node, .mermaid svg .entityBox, .mermaid svg .actor');
+              if (node) {
+                  if (e.relatedTarget && node.contains(e.relatedTarget)) return; // Evitar parpadeo
+                  node.style.filter = 'none';
+                  tooltip.style.opacity = '0';
+              }
+          });
+
+          // Lógica de Zoom y Paneo
+          let currentSvg = null;
+          let scale = 1;
+          let panning = false;
+          let pointX = 0;
+          let pointY = 0;
+          let start = { x: 0, y: 0 };
+
+          const zoomContainer = document.getElementById('zoomContainer');
+
+          document.querySelectorAll('.diagram-container').forEach(container => {
+              const btn = document.createElement('button');
+              btn.className = 'zoom-btn';
+              btn.innerHTML = '🔍 Ampliar / Explorar Diagrama';
+              container.insertBefore(btn, container.firstChild);
+
+              btn.addEventListener('click', () => {
+                  const svg = container.querySelector('svg').cloneNode(true);
+                  const zoomModal = document.getElementById('zoomModal');
+                  zoomContainer.innerHTML = '';
+                  
+                  svg.style.width = '100%';
+                  svg.style.height = '100%';
+                  svg.style.transition = 'transform 0.05s linear';
+                  svg.style.transformOrigin = 'center center';
+                  zoomContainer.appendChild(svg);
+                  currentSvg = svg;
+                  
+                  zoomModal.style.display = 'flex';
+                  setTimeout(() => zoomModal.style.opacity = '1', 10);
+
+                  // Resetear valores
+                  scale = 1; pointX = 0; pointY = 0;
+                  updateTransform();
+              });
+          });
+
+          function updateTransform() {
+              if (currentSvg) {
+                  currentSvg.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+              }
+          }
+
+          zoomContainer.onwheel = (e) => {
+              e.preventDefault();
+              const xs = (e.clientX - pointX) / scale;
+              const ys = (e.clientY - pointY) / scale;
+              const delta = (e.wheelDelta ? e.wheelDelta : -e.deltaY);
+              
+              // Zoom más lento (1.05 en lugar de 1.2)
+              (delta > 0) ? (scale *= 1.05) : (scale /= 1.05);
+              
+              pointX = e.clientX - xs * scale;
+              pointY = e.clientY - ys * scale;
+              updateTransform();
+          };
+
+          zoomContainer.onmousedown = (e) => {
+              e.preventDefault();
+              start = { x: e.clientX - pointX, y: e.clientY - pointY };
+              panning = true;
+              zoomContainer.style.cursor = 'grabbing';
+          };
+
+          window.onmouseup = () => { 
+              panning = false; 
+              zoomContainer.style.cursor = 'grab';
+          };
+          
+          window.onmousemove = (e) => {
+              if (!panning) return;
+              e.preventDefault();
+              pointX = (e.clientX - start.x);
+              pointY = (e.clientY - start.y);
+              updateTransform();
+          };
+
+          // Botón Centrar
+          document.getElementById('centerZoomBtn').addEventListener('click', () => {
+              scale = 1;
+              pointX = 0;
+              pointY = 0;
+              updateTransform();
+          });
+      });
+
+      window.closeZoomModal = function() {
+          const m = document.getElementById('zoomModal');
+          m.style.opacity = '0';
+          setTimeout(() => m.style.display = 'none', 300);
+      };
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500&display=swap');
+
+        :root {
+            --bg-color: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-light: #94a3b8;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.5);
+            --highlight: rgba(59, 130, 246, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            background: radial-gradient(circle at top right, #1e293b, var(--bg-color)), 
+                        linear-gradient(to bottom right, var(--bg-color), #000000);
+            background-attachment: fixed;
+            margin: 0;
+            padding: 0;
+            line-height: 1.7;
+        }
+
+        h1, h2, h3, h4 { font-family: 'Outfit', sans-serif; font-weight: 600; }
+
+        .page {
+            width: 21cm; min-height: 29.7cm; margin: 3rem auto; padding: 2.5cm 2cm;
+            box-sizing: border-box; position: relative; background: var(--glass-bg);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border); border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .cover {
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            min-height: 24.7cm; height: auto; text-align: center; position: relative;
+        }
+
+        .cover-logo { max-width: 240px; margin-bottom: 2rem; filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.1)); animation: float 6s ease-in-out infinite; }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
+
+        .cover h1 { font-size: 3.5rem; font-weight: 800; color: #ffffff; margin-bottom: 0.5rem; letter-spacing: -1px; text-shadow: 0 0 30px var(--accent-glow); }
+        .cover h2 { font-size: 1.3rem; color: var(--accent); font-weight: 400; margin-bottom: 1.5rem; letter-spacing: 2px; text-transform: uppercase; }
+        .cover .subtitle { font-size: 1.05rem; color: var(--text-light); margin-bottom: 3rem; max-width: 85%; line-height: 1.6; }
+
+        .team-section { width: 100%; margin-top: auto; text-align: left; background: rgba(0, 0, 0, 0.2); padding: 2rem; border-radius: 16px; border: 1px solid var(--glass-border); position: relative; overflow: visible; }
+        .team-section::before { content: ''; position: absolute; left: 0; top: 0; width: 4px; height: 100%; background: var(--accent); box-shadow: 0 0 15px var(--accent); border-radius: 16px 0 0 16px; }
+        .team-section h3 { color: #fff; margin-top: 0; font-size: 1.4rem; margin-bottom: 1.5rem; }
+        .team-member { margin-bottom: 1.5rem; }
+        .team-member:last-child { margin-bottom: 0; }
+        .team-member strong { font-size: 1.15rem; color: var(--accent); display: block; margin-bottom: 0.3rem; font-family: 'Outfit', sans-serif; }
+        .team-member p { margin: 0; font-size: 0.9rem; color: var(--text-light); text-align: justify; line-height: 1.5; }
+        .date-section { margin-top: 2rem; color: var(--text-light); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 2px; }
+
+        h2.section-title { font-size: 1.8rem; color: #fff; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.8rem; margin-top: 2rem; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 1rem; }
+        h2.section-title::before { content: ''; display: block; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+        p { text-align: justify; margin-bottom: 1rem; font-size: 0.95rem; }
+
+        .highlight { background: var(--highlight); border-left: 3px solid var(--accent); padding: 1.2rem; margin: 1.2rem 0; border-radius: 0 12px 12px 0; }
+        .highlight strong { color: #fff; font-size: 1.05rem; font-family: 'Outfit', sans-serif; display: inline-block; margin-bottom: 0.5rem; }
+
+        .diagram-container { background: rgba(255, 255, 255, 0.95); border-radius: 12px; padding: 1.5rem; padding-top: 3.5rem; margin: 1.5rem 0; box-shadow: inset 0 0 15px rgba(0,0,0,0.1); text-align: center; overflow-x: auto; position: relative; }
+        
+        .zoom-btn { position: absolute; top: 1rem; right: 1rem; background: var(--accent); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-family: 'Outfit', sans-serif; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); transition: all 0.2s; z-index: 10; }
+        .zoom-btn:hover { transform: translateY(-2px); background: #2563eb; box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4); }
+
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 1.5rem 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--glass-border); }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--glass-border); }
+        th { background: rgba(0,0,0,0.4); color: #fff; font-family: 'Outfit', sans-serif; font-weight: 600; }
+        tr:last-child td { border-bottom: none; }
+        td { background: rgba(255,255,255,0.02); color: var(--text-light); font-size: 0.9rem; }
+        td strong { color: #fff; }
+        .page-break { page-break-before: always; }
+
+        /* Floating Tooltip */
+        .floating-tooltip {
+            position: fixed;
+            pointer-events: none; /* Para no interferir con el hover */
+            z-index: 10000;
+            opacity: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            padding: 1rem 1.2rem;
+            border-radius: 12px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            max-width: 320px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+            transition: opacity 0.2s ease;
+            transform: translateZ(0); /* Aceleración GPU */
+        }
+
+        /* Modal Zoom */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            z-index: 9999; opacity: 0; transition: opacity 0.3s ease; justify-content: center; align-items: center;
+            flex-direction: column;
+        }
+
+        .modal-close { position: absolute; top: 1.5rem; right: 2rem; font-size: 2.5rem; color: #fff; cursor: pointer; transition: color 0.2s; z-index: 10001;}
+        .modal-close:hover { color: var(--accent); }
+
+        #zoomContainer {
+            width: 95vw; height: 85vh; background: #fff; border-radius: 12px;
+            overflow: hidden; cursor: grab; position: relative;
+        }
+        #zoomContainer:active { cursor: grabbing; }
+
+        .zoom-controls {
+            margin-top: 1rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .center-btn {
+            background: var(--accent); color: white; border: none; padding: 0.6rem 1.5rem;
+            border-radius: 8px; font-family: 'Outfit', sans-serif; font-weight: 600; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); transition: all 0.2s;
+        }
+        .center-btn:hover { transform: translateY(-2px); background: #2563eb; }
+
+        @media print {
+            @page { size: A4; margin: 0; }
+            body { background: #fff; color: #000; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .page { margin: 0; box-shadow: none; width: 21cm; min-height: 29.7cm; padding: 1.5cm 2cm; background: #fff; border: none; border-radius: 0; backdrop-filter: none; page-break-after: always; }
+            .cover { min-height: 26.7cm; }
+            .cover h1, .cover h2, h2.section-title, .team-section h3, .team-member strong { color: #1a365d; text-shadow: none; }
+            .cover h1 { font-size: 2.8rem; }
+            h2.section-title::before { background: #1a365d; box-shadow: none; }
+            .cover .subtitle, .team-member p, p, td { color: #333; }
+            .team-section { background: #f8fafc; border: 1px solid #e2e8f0; }
+            .team-section::before { background: #2b6cb0; box-shadow: none; }
+            .highlight { background: #f0f7ff; border-left-color: #2b6cb0; }
+            .highlight strong { color: #1a365d; }
+            table { border-color: #e2e8f0; }
+            th { background: #1a365d; color: #fff; }
+            td { background: #fff; border-bottom-color: #e2e8f0; }
+            td strong { color: #1a365d; }
+            .cover-logo { filter: none; animation: none; }
+            .diagram-container { border: 1px solid #e2e8f0; box-shadow: none; padding-top: 1.5rem; }
+            .zoom-btn, .modal-overlay, .floating-tooltip { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Tooltip Flotante (Hover) -->
+    <div id="floatingTooltip" class="floating-tooltip"></div>
+
+    <!-- Modal Zoom -->
+    <div id="zoomModal" class="modal-overlay">
+        <span class="modal-close" onclick="closeZoomModal()">&times;</span>
+        <div id="zoomContainer"></div>
+        <div class="zoom-controls">
+            <button id="centerZoomBtn" class="center-btn">⌖ Centrar Vista</button>
+            <p style="color: #fff; font-family: Outfit; margin: 0;">Usa la rueda del ratón para hacer zoom, y arrastra para moverte (Paneo).</p>
+        </div>
+    </div>
+
+    <!-- PORTADA -->
+    <div class="page">
+        <div class="cover">
+            <img src="frontend/public/logo.webp" alt="Logo UAdeC" class="cover-logo" />
+            
+            <h2>Diseño y Arquitectura de Software</h2>
+            <h1>Ticket de Turno</h1>
+            <p class="subtitle">Plataforma Integral de Agendamiento y Gestión de Trámites Estudiantiles para el Sector Educativo del Estado</p>
+            
+            <div class="team-section">
+                <h3>Integrantes y Estructura de Desarrollo</h3>
+                
+                <div class="team-member">
+                    <strong>David Eduardo Lara Flores</strong>
+                    <p><strong>Frontend y Experiencia de Usuario (UI/UX):</strong> Construcción de una interfaz vanguardista "Liquid Glass" y modo oscuro inteligente empleando React, Vite y TailwindCSS. Implementación del Dashboard Analítico y el <strong>Módulo de Consulta Pública</strong> sin login. Algoritmos de validación estricta (Expresiones Regulares para la CURP) y consumo asíncrono de APIs RESTful.</p>
+                </div>
+
+                <div class="team-member">
+                    <strong>Miguel Angel Arroyo Lopez</strong>
+                    <p><strong>Arquitectura y Backend:</strong> Diseño algorítmico y estructuración de la base de datos relacional (SQLite). Orquestación del servidor mediante FastAPI. Implementación exhaustiva de los Patrones de Diseño (Singleton, Repository, Event Bus). Seguridad administrativa y <strong>generación avanzada de PDFs renderizados matemáticamente con Canvas puro</strong> adaptado al Dark Mode.</p>
+                </div>
+            </div>
+            
+            <div class="date-section">
+                <p>Presentación Oficial - Evaluación Parcial 2</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENIDO - ARQUITECTURA -->
+    <div class="page page-break">
+        <h2 class="section-title">1. Arquitectura del Sistema (MVC)</h2>
+        <p>
+            El sistema se construyó bajo una arquitectura altamente escalable separando drásticamente el Cliente (Frontend) del Servidor (Backend), respetando rigurosamente el patrón <strong>Modelo-Vista-Controlador (MVC)</strong>. <br>
+            <em style="color: var(--accent); font-size: 0.9rem;">(💡 Pasa el ratón sobre los módulos del diagrama para ver su justificación técnica)</em>
+        </p>
+
+        <div class="diagram-container">
+            <pre class="mermaid">
+                flowchart TD
+                    subgraph Vista ["Capa de Presentación (React + Tailwind)"]
+                        UI[Interfaces Liquid Glass]
+                        Hooks[Estado y Validaciones]
+                    end
+
+                    subgraph Controlador ["Capa Lógica (FastAPI + Python)"]
+                        API[Endpoints REST API]
+                        Control[Controladores / Reglas]
+                        Repo[Patrón Repository]
+                    end
+
+                    subgraph Modelo ["Capa de Datos (Base de Datos)"]
+                        DB[(SQLite 3 Relacional)]
+                        Entities[Clases de Datos]
+                    end
+
+                    UI <-->|HTTP JSON| API
+                    API --> Control
+                    Control --> Repo
+                    Repo --> Entities
+                    Repo <-->|Transacciones| DB
+            </pre>
+        </div>
+
+        <div class="highlight">
+            <strong>Patrones de Diseño Implementados</strong>
+            <br>
+            <ul>
+                <li><strong>Singleton:</strong> Instancia global y única de conexión a SQLite aislada por hilos de ejecución para evitar bloqueos por concurrencia.</li>
+                <li><strong>Repository Pattern:</strong> Aísla el código SQL de los Controladores. Todo acceso a la Base de Datos se hace mediante interfaces abstractas.</li>
+                <li><strong>Observer (Event Bus):</strong> Emite eventos asíncronos entre componentes cuando los administradores modifican los catálogos.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- CONTENIDO - BASE DE DATOS -->
+    <div class="page page-break">
+        <h2 class="section-title">2. Modelo de Base de Datos Normalizado</h2>
+        <p>
+            La base de datos fue diseñada para asegurar integridad referencial y prevenir anomalías, estando <strong>normalizada hasta la Tercera Forma Normal (3FN)</strong>. Las tablas maestras y catálogos interactúan de forma relacional con la tabla transaccional de <code>SOLICITUDES</code>.
+        </p>
+
+        <div class="diagram-container">
+            <pre class="mermaid">
+                erDiagram
+                    ALUMNOS ||--o{ SOLICITUDES : genera
+                    MUNICIPIOS ||--o{ SOLICITUDES : registra_en
+                    ASUNTOS ||--o{ SOLICITUDES : requiere
+                    NIVELES_EDUCATIVOS ||--o{ ALUMNOS : pertenece_a
+                    
+                    ADMINISTRADOR {
+                        int id PK
+                        string username
+                        string password_hash
+                    }
+                    ALUMNOS {
+                        string curp PK
+                        string nombre
+                        string paterno
+                        string materno
+                        int nivel_id FK
+                    }
+                    SOLICITUDES {
+                        int id PK
+                        int numero_turno
+                        string curp_alumno FK
+                        string quien_tramita
+                        string estatus
+                        int asunto_id FK
+                        int municipio_id FK
+                    }
+                    MUNICIPIOS {
+                        int id PK
+                        string nombre
+                    }
+                    ASUNTOS {
+                        int id PK
+                        string descripcion
+                    }
+            </pre>
+        </div>
+    </div>
+
+    <!-- CONTENIDO - LOGICA 1 -->
+    <div class="page page-break">
+        <h2 class="section-title">3. Lógica de la Aplicación: Interfaz Pública (Tickets)</h2>
+        <p>
+            El flujo de atención a padres de familia permite solicitar y emitir turnos independientes por Municipio, calculados algorítmicamente. Además, integra un <strong>Módulo de Consulta Pública</strong> que permite buscar un turno usando solo la CURP, y reimprimir el ticket en un archivo PDF renderizado a nivel píxel mediante la API de Canvas.
+        </p>
+
+        <div class="diagram-container">
+            <pre class="mermaid">
+                sequenceDiagram
+                    actor Padre as Padre/Tutor
+                    participant UI as Ventanilla Pública
+                    participant API as Backend (FastAPI)
+                    participant DB as Base de Datos
+
+                    Padre->>UI: Ingresa CURP y Datos Personales
+                    UI->>UI: Validación RegEx Oficial CURP (18 caracteres)
+                    Padre->>UI: Elige Municipio, Nivel y Asunto
+                    Padre->>UI: Clic en "Generar Ticket"
+                    UI->>API: POST /api/solicitudes (JSON)
+                    API->>DB: Registra o actualiza al Alumno
+                    API->>DB: Calcula Turno MAX() + 1 para ese Municipio
+                    DB-->>API: Nuevo Turno Generado
+                    API->>DB: Inserta la Solicitud y Vincula Relaciones
+                    API-->>UI: 200 OK + Ticket en JSON
+                    UI-->>Padre: Muestra Número en Pantalla
+                    Padre->>UI: Clic en "Descargar Comprobante PDF"
+                    UI->>API: GET /api/solicitudes/{id}/pdf
+                    API-->>UI: Buffer Binario PDF (Generado Dinámicamente)
+            </pre>
+        </div>
+    </div>
+
+    <!-- CONTENIDO - LOGICA 2 -->
+    <div class="page page-break">
+        <h2 class="section-title">4. Lógica de la Aplicación: Panel Administrativo</h2>
+        <p>
+            El sistema incluye un submódulo protegido que permite al personal de la universidad y directivos gestionar, auditar y resolver las solicitudes ciudadanas a través de un Dashboard y herramientas CRUD.
+        </p>
+
+        <div class="diagram-container">
+            <pre class="mermaid">
+                flowchart TD
+                    Admin((Administrador)) -->|Inicia Sesión| Auth{Autenticación Segura}
+                    Auth -->|Credenciales Inválidas| Rechazo[Acceso Denegado]
+                    Auth -->|Acceso Concedido| Core[Panel de Control Interno]
+                    
+                    Core --> Stats[Dashboard Analítico]
+                    Stats --> Filtros[Filtros Cruzados: Nivel, Asunto, Ubicación]
+                    Filtros --> Graficas[Gráficas Interactivas en Tiempo Real]
+                    
+                    Core --> Search[Gestión de Tickets]
+                    Search --> Find[Búsqueda Rápida por CURP / Nombre]
+                    Find --> Edit[Modificar Datos del Ticket]
+                    Find --> Status[Cambiar Estatus: Pendiente <--> Resuelto]
+                    Find --> Delete[Eliminar Registro del Sistema]
+                    
+                    Core --> Crud[Gestión de Catálogos]
+                    Crud --> Municipios[Crear/Editar/Borrar Municipios]
+                    Crud --> Asuntos[Crear/Editar/Borrar Asuntos]
+            </pre>
+        </div>
+
+        <div class="highlight" style="margin-top: 2rem;">
+            <strong>Resumen de Requerimientos Operacionales Exigidos en Rúbrica:</strong>
+            <br>
+            <ul>
+                <li>Totalmente orientado a Objetos (Cumplido).</li>
+                <li>Arquitectura en MVC implementada (Cumplido).</li>
+                <li>Modelos de Clases y Base de Datos (Cumplido).</li>
+                <li>Validación oficial de la CURP (Cumplido).</li>
+                <li>Login administrativo (Cumplido).</li>
+                <li>Operaciones CRUD para Catálogos (Cumplido).</li>
+                <li>Sistema de control de versiones con Git (Cumplido).</li>
+                <li>Más de 2 Patrones de Diseño (Cumplido).</li>
+                <li>Formulario para registrar/modificar tickets por CURP y emisión en PDF (Cumplido).</li>
+                <li>Consulta administrativa para cambiar estatus (Pendiente/Resuelto) (Cumplido).</li>
+                <li>Turnos calculados de 1 a n separados por municipio (Cumplido).</li>
+                <li>Tablero Estadístico / Dashboard (Cumplido).</li>
+            </ul>
+        </div>
+    </div>
+
+</body>
+</html>

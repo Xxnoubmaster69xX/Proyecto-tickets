@@ -2,48 +2,117 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg-color: #070b14;
+  --surface-color: #0f1626;
+  --surface-light-color: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --border-color: #1e293b;
+  --primary-color: #003b71; /* UAdeC Blue */
+  --primary-hover: #00284d;
+  --gold-color: #d4af37; /* UAdeC Gold */
+  --gold-hover: #e5c158;
+}
+
+/* Tema Claro Eliminado - Siempre Oscuro */
+
 @layer base {
   body {
-    @apply bg-background text-gray-100 font-sans antialiased;
+    @apply font-sans antialiased;
     margin: 0;
     min-height: 100vh;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
 @layer components {
   .glass-panel {
-    @apply bg-surface/80 backdrop-blur-md border border-gray-800 shadow-xl rounded-xl;
+    @apply backdrop-blur-md shadow-xl rounded-xl transition-all duration-300;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
   }
   
   .input-field {
-    @apply w-full bg-surfaceLight border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all;
+    @apply w-full rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all;
+    background-color: var(--surface-light-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
   }
   
   .btn-primary {
-    @apply px-4 py-2 bg-primary hover:bg-primaryHover text-white font-medium rounded-lg shadow-lg shadow-primary/20 transition-all active:scale-95;
+    @apply px-4 py-2 font-medium rounded-lg shadow-lg transition-all active:scale-95;
+    background-color: var(--primary-color);
+    color: #ffffff;
+    box-shadow: 0 10px 15px -3px rgba(0, 59, 113, 0.2), 0 4px 6px -4px rgba(0, 59, 113, 0.1);
+  }
+  .btn-primary:hover {
+    background-color: var(--primary-hover);
+    box-shadow: 0 10px 15px -3px rgba(0, 40, 77, 0.3), 0 4px 6px -4px rgba(0, 40, 77, 0.2);
   }
   
   .btn-secondary {
-    @apply px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-all active:scale-95;
+    @apply px-4 py-2 font-medium rounded-lg transition-all active:scale-95;
+    background-color: var(--surface-light-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
   }
-
+  .btn-secondary:hover {
+    background-color: var(--surface-color);
+  }
   .btn-danger {
     @apply px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg shadow-lg shadow-red-500/20 transition-all active:scale-95;
   }
+
+  .liquid-glass-panel {
+    @apply relative overflow-hidden;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    border-radius: 1rem;
+  }
 }
 
-/* Custom Scrollbar for dark theme */
+
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0B0F19; 
+  background: var(--bg-color); 
 }
 ::-webkit-scrollbar-thumb {
-  background: #374151; 
+  background: var(--surface-light-color); 
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #4B5563; 
+  background: var(--border-color); 
 }
+
+/* Dynamic Aurora Blob Animations */
+@keyframes float-blob-1 {
+  0% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(80px, 50px) scale(1.15); }
+  100% { transform: translate(-30px, 100px) scale(0.9); }
+}
+@keyframes float-blob-2 {
+  0% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(-90px, -80px) scale(0.85); }
+  100% { transform: translate(50px, -30px) scale(1.1); }
+}
+@keyframes float-blob-3 {
+  0% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(40px, -60px) scale(1.1); }
+  100% { transform: translate(-60px, 40px) scale(0.95); }
+}
+@keyframes float-blob-4 {
+  0% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(-50px, 50px) scale(1.1); }
+  100% { transform: translate(40px, -50px) scale(0.9); }
+}
+

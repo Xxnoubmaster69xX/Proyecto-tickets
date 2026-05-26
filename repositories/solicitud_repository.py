@@ -45,7 +45,16 @@ class SolicitudRepository(BaseRepository[Solicitud]):
     def get_all(self) -> List[Solicitud]:
         try:
             cursor = self.db.cursor()
-            cursor.execute("SELECT * FROM solicitudes")
+            cursor.execute('''
+                SELECT s.*, 
+                       a.nombre || ' ' || a.paterno || ' ' || a.materno as nombre_alumno,
+                       m.nombre as municipio_nombre, 
+                       c.descripcion as asunto_descripcion
+                FROM solicitudes s
+                JOIN alumnos a ON s.curp_alumno = a.curp
+                JOIN municipios m ON s.municipio_id = m.id
+                JOIN asuntos c ON s.asunto_id = c.id
+            ''')
             return [self._map_row_to_entity(row) for row in cursor.fetchall()]
         except Exception as e:
             print(f"[{datetime.now()}] Error get_all: {e}")
@@ -158,17 +167,37 @@ class SolicitudRepository(BaseRepository[Solicitud]):
             print(f"[{datetime.now()}] Error get_next_turno_for_municipio: {e}")
             return 1
 
-    def get_stats_by_municipio(self, municipio_id: Optional[int]) -> dict:
+    def get_stats_by_municipio(self, municipio_id: Optional[int] = None, asunto_id: Optional[int] = None, nivel_id: Optional[int] = None) -> dict:
         try:
             cursor = self.db.cursor()
-            stats = {'total': 0, 'pendientes': 0, 'resueltos': 0, 'por_municipio': [], 'por_asunto': []}
+            stats = {'total': 0, 'pendientes': 0, 'resueltos': 0, 'por_municipio': [], 'por_asunto': [], 'por_nivel': []}
             
-            # KPI totals
+            # Base Joins
+            base_join = '''
+                FROM solicitudes s 
+                JOIN alumnos a ON s.curp_alumno = a.curp
+            '''
+            
+            # Dynamic WHERE clause
+            conditions = []
+            params = []
+            
             if municipio_id:
-                cursor.execute("SELECT COUNT(*), estatus FROM solicitudes WHERE municipio_id = ? GROUP BY estatus", (municipio_id,))
-            else:
-                cursor.execute("SELECT COUNT(*), estatus FROM solicitudes GROUP BY estatus")
+                conditions.append("s.municipio_id = ?")
+                params.append(municipio_id)
+            if asunto_id:
+                conditions.append("s.asunto_id = ?")
+                params.append(asunto_id)
+            if nivel_id:
+                conditions.append("a.nivel_id = ?")
+                params.append(nivel_id)
                 
+            where_clause = ""
+            if conditions:
+                where_clause = " WHERE " + " AND ".join(conditions)
+                
+            # KPI totals
+            cursor.execute(f"SELECT COUNT(*), s.estatus {base_join} {where_clause} GROUP BY s.estatus", params)
             for count, estatus in cursor.fetchall():
                 stats['total'] += count
                 if estatus == 'Pendiente':
@@ -177,33 +206,33 @@ class SolicitudRepository(BaseRepository[Solicitud]):
                     stats['resueltos'] = count
                     
             # By municipio
-            if not municipio_id:
-                cursor.execute('''
-                    SELECT m.nombre, COUNT(*) 
-                    FROM solicitudes s JOIN municipios m ON s.municipio_id = m.id 
-                    GROUP BY m.id
-                ''')
-                stats['por_municipio'] = cursor.fetchall()
+            cursor.execute(f'''
+                SELECT m.id, m.nombre, COUNT(*) 
+                {base_join} JOIN municipios m ON s.municipio_id = m.id 
+                {where_clause} GROUP BY m.id
+            ''', params)
+            stats['por_municipio'] = [{'id': row[0], 'nombre': row[1], 'COUNT(*)': row[2]} for row in cursor.fetchall()]
             
             # By asunto
-            if municipio_id:
-                cursor.execute('''
-                    SELECT a.descripcion, COUNT(*) 
-                    FROM solicitudes s JOIN asuntos a ON s.asunto_id = a.id 
-                    WHERE s.municipio_id = ? GROUP BY a.id
-                ''', (municipio_id,))
-            else:
-                cursor.execute('''
-                    SELECT a.descripcion, COUNT(*) 
-                    FROM solicitudes s JOIN asuntos a ON s.asunto_id = a.id 
-                    GROUP BY a.id
-                ''')
-            stats['por_asunto'] = cursor.fetchall()
+            cursor.execute(f'''
+                SELECT asu.id, asu.descripcion, COUNT(*) 
+                {base_join} JOIN asuntos asu ON s.asunto_id = asu.id 
+                {where_clause} GROUP BY asu.id
+            ''', params)
+            stats['por_asunto'] = [{'id': row[0], 'descripcion': row[1], 'COUNT(*)': row[2]} for row in cursor.fetchall()]
+
+            # By nivel educativo
+            cursor.execute(f'''
+                SELECT n.id, n.nombre, COUNT(*) 
+                {base_join} JOIN niveles_educativos n ON a.nivel_id = n.id 
+                {where_clause} GROUP BY n.id
+            ''', params)
+            stats['por_nivel'] = [{'id': row[0], 'nombre': row[1], 'COUNT(*)': row[2]} for row in cursor.fetchall()]
                 
             return stats
         except Exception as e:
             print(f"[{datetime.now()}] Error get_stats_by_municipio: {e}")
-            return {'total': 0, 'pendientes': 0, 'resueltos': 0, 'por_municipio': [], 'por_asunto': []}
+            return {'total': 0, 'pendientes': 0, 'resueltos': 0, 'por_municipio': [], 'por_asunto': [], 'por_nivel': []}
 
     def cambiar_estatus(self, id: int, estatus: str) -> bool:
         try:

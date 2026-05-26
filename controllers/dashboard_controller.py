@@ -5,5 +5,5 @@ class DashboardController:
     def __init__(self):
         self.repo = SolicitudRepository()
 
-    def get_stats(self, municipio_id: Optional[int] = None) -> dict:
-        return self.repo.get_stats_by_municipio(municipio_id)
+    def get_stats(self, municipio_id: Optional[int] = None, asunto_id: Optional[int] = None, nivel_id: Optional[int] = None) -> dict:
+        return self.repo.get_stats_by_municipio(municipio_id, asunto_id, nivel_id)

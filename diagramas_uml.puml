@@ -1,0 +1,119 @@
+@startuml Diagrama_General_Unificado
+title Diagrama Unificado: App General, Frontend, Backend y Base de Datos
+allowmixing
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 50
+
+' ==========================================
+' 4. APP GENERAL (Actores)
+' ==========================================
+package "4. Arquitectura App General (Actores)" {
+  actor "Padre / Tutor" as padre <<Actor Externo>>
+  actor "Personal UAdeC" as admin <<Actor Interno>>
+}
+
+' ==========================================
+' 3. FRONTEND (React)
+' ==========================================
+package "3. Frontend (Clases y Objetos React)" {
+  class "App_Router" as router <<Clase Componente>> {
+    + definirRutas()
+  }
+  
+  class "PublicRegistration" as ventanilla <<Clase UI>> {
+    + renderNuevoRegistro()
+    + renderConsultar()
+  }
+  
+  class "AdminDashboard" as dashboard <<Clase UI>> {
+    + renderEstadisticas()
+    + renderTickets()
+  }
+  
+  object "Estado_Ventanilla" as state <<Objeto Memoria (State)>> {
+    mode = "consultar"
+    foundTicketId = 14
+  }
+  
+  router --> ventanilla : Renderiza
+  router --> dashboard : Renderiza
+  ventanilla --> state : Muta
+}
+
+padre --> ventanilla : Interactúa con
+admin --> dashboard : Administra desde
+
+' ==========================================
+' 2. BACKEND (FastAPI / Patrones)
+' ==========================================
+package "2. Backend (Clases y Objetos Python)" {
+  class "DatabaseConnection" as singleton <<Clase Singleton>> {
+    + initialize()
+    + get_conn()
+  }
+  
+  object "db_instance" as inst_db <<Objeto Único>> {
+    is_connected = True
+  }
+  
+  class "SolicitudController" as ctrl_sol <<Clase Controlador>> {
+    + POST /api/solicitudes
+    + GET /api/solicitudes/buscar
+  }
+  
+  class "SolicitudRepository" as repo_sol <<Clase Repositorio>> {
+    + insert()
+    + fetch_all()
+  }
+  
+  class "TicketPDFGenerator" as pdf_gen <<Clase Utilidad>> {
+    + generate_canvas()
+  }
+  
+  singleton ..> inst_db : Crea/Retorna Instancia
+  ctrl_sol --> repo_sol : Delega persistencia
+  ctrl_sol --> pdf_gen : Solicita Renderizado
+  repo_sol --> singleton : Usa conexión
+}
+
+ventanilla <--> ctrl_sol : HTTP / JSON
+dashboard <--> ctrl_sol : HTTP / Auth JWT
+
+' ==========================================
+' 1. BASE DE DATOS (SQLite)
+' ==========================================
+package "1. Base de Datos (Estructuras Físicas)" {
+  database "ticket_turno.db" as db_file <<Archivo Físico SQLite>>
+  
+  object "ALUMNOS" as tb_alumnos <<Estructura Tabla>> {
+    * curp : varchar(18) [PK]
+    --
+    nombre : varchar
+    paterno : varchar
+  }
+  
+  object "SOLICITUDES" as tb_solicitudes <<Estructura Tabla>> {
+    * id : integer [PK]
+    --
+    numero_turno : integer
+    curp_alumno : varchar [FK]
+    estatus : varchar
+  }
+  
+  object "CATALOGOS" as tb_catalogos <<Estructura Tabla>> {
+    * id : integer [PK]
+    --
+    nombre_municipio : varchar
+  }
+  
+  tb_alumnos "1" -- "0..*" tb_solicitudes : Genera
+  tb_catalogos "1" -- "0..*" tb_solicitudes : Ubica
+  
+  db_file *-- tb_alumnos : Contiene
+  db_file *-- tb_solicitudes : Contiene
+  db_file *-- tb_catalogos : Contiene
+}
+
+repo_sol --> db_file : Ejecuta Queries SQL
+@enduml
